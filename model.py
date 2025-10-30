@@ -64,7 +64,7 @@ def train_and_save(df, model_name, model_dir="models"):
         Dense(len(TARGET_COLUMNS))
     ])
     model.compile(optimizer='adam', loss=MeanSquaredError())
-    model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), verbose=1)
+    model.fit(X_train, y_train, epochs=2, batch_size=32, validation_data=(X_test, y_test), verbose=1)
 
     # Simpan model dan scaler
     model_path = os.path.join(model_dir, f"{model_name}.h5")
