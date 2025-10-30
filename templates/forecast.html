@@ -103,13 +103,23 @@
     {% if prediction %}
     <div class="result">
         <h3>Prediksi {{ 'Langkah' if prediction|length == 1 else 'Langkah-Langkah' }} ke Depan</h3>
-        <ul>
-            {% for k, v in prediction.items() %}
-            <li><strong>{{ k }}</strong>: {{ v }}</li>
-            {% endfor %}
-        </ul>
+        <details>
+            <summary>Klik untuk lihat nilai prediksi per langkah</summary>
+            <ul>
+                {% for k, v in prediction.items() %}
+                <li><strong>{{ k }}</strong>:
+                    <ul>
+                        {% for col, val in v.items() %}
+                        <li><strong>{{ col }}</strong>: {{ val }}</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                {% endfor %}
+            </ul>
+        </details>
     </div>
     <div class="plot">
+        <p><em>Visualisasi prediksi untuk semua 21 parameter (50 data terakhir + prediksi ke depan)</em></p>
         {{ plot_html | safe }}
     </div>
     {% endif %}

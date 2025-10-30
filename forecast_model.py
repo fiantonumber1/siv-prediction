@@ -117,27 +117,58 @@ def predict_with_model(df_new, model_name, model_dir="models", steps=1):
     df_clean = preprocess_data(df_new)
     scaled = scaler.transform(df_clean)
 
-    # Prediksi multi-step ke depan
+    # Prediksi multi-step
     last_seq = scaled[-WINDOW_SIZE:].copy()
     preds = []
     for _ in range(steps):
         pred_scaled = model.predict(last_seq.reshape(1, WINDOW_SIZE, len(TARGET_COLUMNS)))[0]
         preds.append(scaler.inverse_transform(pred_scaled.reshape(1, -1))[0])
-        last_seq = np.vstack([last_seq[1:], pred_scaled])  # geser window
+        last_seq = np.vstack([last_seq[1:], pred_scaled])
 
-    # hasil akhir dalam bentuk dict
-    pred_dict = {f"Step {i+1}": {col: round(val, 2) for col, val in zip(TARGET_COLUMNS, preds[i])} for i in range(steps)}
-
-    # Plot tren aktual vs prediksi
-    actual = df_clean.iloc[-100:][TARGET_COLUMNS[0]].values
-    pred_trend = [p[0] for p in preds]  # hanya kolom pertama untuk plot
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=actual, mode='lines', name='Aktual'))
-    fig.add_trace(go.Scatter(y=[None]*(100) + pred_trend, mode='lines', name='Prediksi', line=dict(dash='dot')))
-    fig.update_layout(
-        title=f"Tren Prediksi {steps} Langkah ke Depan ({TARGET_COLUMNS[0]})",
-        xaxis_title="Waktu",
-        yaxis_title="Nilai"
+    # Buat subplot untuk SEMUA parameter
+    n_cols = len(TARGET_COLUMNS)
+    fig = make_subplots(
+        rows=(n_cols + 2) // 3, cols=3,
+        subplot_titles=TARGET_COLUMNS,
+        vertical_spacing=0.05,
+        horizontal_spacing=0.07
     )
+
+    history_length = min(50, len(df_clean))  # ambil 50 data terakhir
+    historical = df_clean.iloc[-history_length:]
+
+    for idx, col in enumerate(TARGET_COLUMNS):
+        row = (idx // 3) + 1
+        col_pos = (idx % 3) + 1
+
+        # Data historis
+        fig.add_trace(
+            go.Scatter(y=historical[col], mode='lines', name='Aktual', line=dict(color='blue')),
+            row=row, col=col_pos
+        )
+
+        # Prediksi (dari akhir data historis)
+        pred_values = [p[idx] for p in preds]
+        x_pred = list(range(len(historical), len(historical) + steps))
+        fig.add_trace(
+            go.Scatter(x=x_pred, y=pred_values, mode='lines+markers', name='Prediksi',
+                       line=dict(color='red', dash='dot'), marker=dict(size=6)),
+            row=row, col=col_pos
+        )
+
+        fig.update_yaxes(title_text=col, row=row, col=col_pos)
+
+    fig.update_layout(
+        height=200 * ((n_cols + 2) // 3),
+        title_text=f"Prediksi {steps} Langkah ke Depan - Semua Parameter",
+        showlegend=False,
+        hovermode="x unified"
+    )
+
+    # Hasil prediksi dalam dict
+    pred_dict = {
+        f"Step {i+1}": {col: round(val, 2) for col, val in zip(TARGET_COLUMNS, preds[i])}
+        for i in range(steps)
+    }
 
     return pred_dict, fig.to_html(full_html=False)
