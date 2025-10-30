@@ -1,4 +1,3 @@
-# model.py
 import pandas as pd
 import numpy as np
 import joblib
@@ -6,8 +5,9 @@ import os
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.losses import MeanSquaredError
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -52,11 +52,14 @@ def train_and_save(df, model_name, model_dir="models"):
     X, y = create_sequences(scaled)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
-    model = Sequential([LSTM(64, input_shape=(WINDOW_SIZE, len(TARGET_COLUMNS))), Dense(len(TARGET_COLUMNS))])
-    model.compile(optimizer='adam', loss='mse')
+    model = Sequential([
+        LSTM(64, input_shape=(WINDOW_SIZE, len(TARGET_COLUMNS))),
+        Dense(len(TARGET_COLUMNS))
+    ])
+    model.compile(optimizer='adam', loss=MeanSquaredError())
     model.fit(X_train, y_train, epochs=30, batch_size=64, validation_data=(X_test, y_test), verbose=1)
 
-    # Simpan model + scaler
+    # Simpan model dan scaler
     model_path = os.path.join(model_dir, f"{model_name}.h5")
     scaler_path = os.path.join(model_dir, f"{model_name}_scaler.pkl")
     model.save(model_path)
@@ -70,7 +73,12 @@ def train_and_save(df, model_name, model_dir="models"):
     mse = mean_squared_error(y_inv, pred_inv)
     rmse = np.sqrt(mse)
 
-    return {"mae": round(mae, 4), "mse": round(mse, 4), "rmse": round(rmse, 4), "model_path": model_path}
+    return {
+        "mae": round(mae, 4),
+        "mse": round(mse, 4),
+        "rmse": round(rmse, 4),
+        "model_path": model_path
+    }
 
 def predict_with_model(df_new, model_name, model_dir="models"):
     scaler_path = os.path.join(model_dir, f"{model_name}_scaler.pkl")
@@ -79,9 +87,11 @@ def predict_with_model(df_new, model_name, model_dir="models"):
     if not os.path.exists(scaler_path) or not os.path.exists(model_path):
         raise FileNotFoundError("Model atau scaler tidak ditemukan!")
 
-    from tensorflow.keras.models import load_model
     scaler = joblib.load(scaler_path)
-    model = load_model(model_path)
+
+    # load_model dengan compile=False agar tidak error 'mse'
+    model = load_model(model_path, compile=False)
+    model.compile(optimizer='adam', loss=MeanSquaredError())
 
     df_clean = preprocess_data(df_new)
     scaled = scaler.transform(df_clean)
@@ -92,7 +102,7 @@ def predict_with_model(df_new, model_name, model_dir="models"):
     pred = scaler.inverse_transform(pred_scaled)[0]
     pred_dict = {col: round(val, 2) for col, val in zip(TARGET_COLUMNS, pred)}
 
-    # Plot tren: aktual vs prediksi (rolling)
+    # Plot tren: aktual vs prediksi
     actual = df_clean.iloc[-100:][TARGET_COLUMNS[0]].values  # contoh: kolom pertama
     pred_trend = []
     current_seq = scaled[-WINDOW_SIZE:].copy()
@@ -104,6 +114,10 @@ def predict_with_model(df_new, model_name, model_dir="models"):
     fig = go.Figure()
     fig.add_trace(go.Scatter(y=actual, mode='lines', name='Aktual'))
     fig.add_trace(go.Scatter(y=[None]*90 + pred_trend, mode='lines', name='Prediksi', line=dict(dash='dot')))
-    fig.update_layout(title=f"Tren Prediksi vs Aktual ({TARGET_COLUMNS[0]})", xaxis_title="Waktu", yaxis_title="Nilai")
-    
+    fig.update_layout(
+        title=f"Tren Prediksi vs Aktual ({TARGET_COLUMNS[0]})",
+        xaxis_title="Waktu",
+        yaxis_title="Nilai"
+    )
+
     return pred_dict, fig.to_html(full_html=False)
