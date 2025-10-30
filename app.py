@@ -47,14 +47,16 @@ def index():
         elif action == 'predict':
             file = request.files['file']
             model_name = request.form['model_select']
+            steps = int(request.form.get('steps', 1))  # ← ambil dari input HTML
             if not file or not model_name:
                 error = "File dan model wajib dipilih!"
             else:
                 try:
                     df_stream = io.StringIO(file.stream.read().decode('utf-8'))
-                    prediction, plot_html = predict_with_model(df_stream, model_name, app.config['MODEL_DIR'])
+                    prediction, plot_html = predict_with_model(df_stream, model_name, app.config['MODEL_DIR'], steps=steps)
                 except Exception as e:
                     error = str(e)
+
 
     return render_template('index.html', 
                          models=models, 

@@ -38,6 +38,7 @@
         <button type="submit">Train Model</button>
     </form>
 
+   
     <!-- PREDICT -->
     <h2>2. Prediksi dengan Model</h2>
     <form method="POST" enctype="multipart/form-data">
@@ -55,8 +56,13 @@
             <label>Upload CSV Baru (untuk prediksi)</label>
             <input type="file" name="file" accept=".csv" required>
         </div>
+        <div class="form-group">
+            <label>Jumlah Langkah Prediksi ke Depan</label>
+            <input type="number" name="steps" value="1" min="1" max="100" required>
+        </div>
         <button type="submit">Prediksi</button>
     </form>
+
 
     <!-- HASIL -->
     {% if results %}

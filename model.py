@@ -103,7 +103,7 @@ def train_and_save(df, model_name, model_dir="models"):
         "model_path": model_path
     }
 
-def predict_with_model(df_new, model_name, model_dir="models"):
+def predict_with_model(df_new, model_name, model_dir="models", steps=1):
     scaler_path = os.path.join(model_dir, f"{model_name}_scaler.pkl")
     model_path = os.path.join(model_dir, f"{model_name}.h5")
 
@@ -111,34 +111,31 @@ def predict_with_model(df_new, model_name, model_dir="models"):
         raise FileNotFoundError("Model atau scaler tidak ditemukan!")
 
     scaler = joblib.load(scaler_path)
-
-    # load_model dengan compile=False agar tidak error 'mse'
     model = load_model(model_path, compile=False)
     model.compile(optimizer='adam', loss=MeanSquaredError())
 
     df_clean = preprocess_data(df_new)
     scaled = scaler.transform(df_clean)
 
-    # Prediksi satu langkah dari data terakhir
-    last_seq = scaled[-WINDOW_SIZE:].reshape(1, WINDOW_SIZE, len(TARGET_COLUMNS))
-    pred_scaled = model.predict(last_seq)
-    pred = scaler.inverse_transform(pred_scaled)[0]
-    pred_dict = {col: round(val, 2) for col, val in zip(TARGET_COLUMNS, pred)}
+    # Prediksi multi-step ke depan
+    last_seq = scaled[-WINDOW_SIZE:].copy()
+    preds = []
+    for _ in range(steps):
+        pred_scaled = model.predict(last_seq.reshape(1, WINDOW_SIZE, len(TARGET_COLUMNS)))[0]
+        preds.append(scaler.inverse_transform(pred_scaled.reshape(1, -1))[0])
+        last_seq = np.vstack([last_seq[1:], pred_scaled])  # geser window
 
-    # Plot tren: aktual vs prediksi
-    actual = df_clean.iloc[-100:][TARGET_COLUMNS[0]].values  # contoh: kolom pertama
-    pred_trend = []
-    current_seq = scaled[-WINDOW_SIZE:].copy()
-    for _ in range(10):
-        p = model.predict(current_seq.reshape(1, WINDOW_SIZE, len(TARGET_COLUMNS)))[0]
-        pred_trend.append(scaler.inverse_transform(p.reshape(1, -1))[0][0])
-        current_seq = np.vstack([current_seq[1:], p])
+    # hasil akhir dalam bentuk dict
+    pred_dict = {f"Step {i+1}": {col: round(val, 2) for col, val in zip(TARGET_COLUMNS, preds[i])} for i in range(steps)}
 
+    # Plot tren aktual vs prediksi
+    actual = df_clean.iloc[-100:][TARGET_COLUMNS[0]].values
+    pred_trend = [p[0] for p in preds]  # hanya kolom pertama untuk plot
     fig = go.Figure()
     fig.add_trace(go.Scatter(y=actual, mode='lines', name='Aktual'))
-    fig.add_trace(go.Scatter(y=[None]*90 + pred_trend, mode='lines', name='Prediksi', line=dict(dash='dot')))
+    fig.add_trace(go.Scatter(y=[None]*(100) + pred_trend, mode='lines', name='Prediksi', line=dict(dash='dot')))
     fig.update_layout(
-        title=f"Tren Prediksi vs Aktual ({TARGET_COLUMNS[0]})",
+        title=f"Tren Prediksi {steps} Langkah ke Depan ({TARGET_COLUMNS[0]})",
         xaxis_title="Waktu",
         yaxis_title="Nilai"
     )
