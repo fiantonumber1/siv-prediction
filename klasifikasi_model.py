@@ -111,3 +111,33 @@ def predict_with_model(df_stream, model_name, model_dir):
         results.append(row)
 
     return results
+
+
+    # klasifikasi_model.py (tambahkan fungsi ini di bawah)
+
+def predict_manual(values, model_name, model_dir):
+    """Prediksi dari list nilai manual (21 fitur)"""
+    if len(values) != len(TARGET_COLUMNS):
+        raise ValueError(f"Harus ada {len(TARGET_COLUMNS)} nilai, diterima {len(values)}")
+
+    X = np.array(values).reshape(1, -1)
+    
+    scaler_path = os.path.join(model_dir, f"{model_name}_scaler.pkl")
+    model_path = os.path.join(model_dir, f"{model_name}_clf.h5")
+
+    if not os.path.exists(scaler_path) or not os.path.exists(model_path):
+        raise FileNotFoundError("Model atau scaler tidak ditemukan!")
+
+    scaler = joblib.load(scaler_path)
+    from tensorflow.keras.models import load_model
+    model = load_model(model_path)
+
+    X_scaled = scaler.transform(X)
+    y_pred = model.predict(X_scaled, verbose=0)[0]
+    y_pred_binary = (y_pred > 0.5).astype(int)
+
+    result = {label: int(y_pred_binary[i]) for i, label in enumerate(LABEL_COLUMNS)}
+    result['definitions'] = {k: LABEL_DEFINITIONS[k] for k, v in result.items() if v == 1}
+    result['probabilities'] = {k: round(float(v), 4) for k, v in zip(LABEL_COLUMNS, y_pred)}
+
+    return result

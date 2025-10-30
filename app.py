@@ -5,7 +5,15 @@ import os
 import io
 from forecast_model import preprocess_data, train_and_save, predict_with_model
 # app.py (tambahkan ini)
-from klasifikasi_model import train_and_save as clf_train, predict_with_model as clf_predict
+# Import klasifikasi + TARGET_COLUMNS
+from klasifikasi_model import (
+    train_and_save as clf_train,
+    predict_with_model as clf_predict,
+    predict_manual,
+    TARGET_COLUMNS,      # <--- INI YANG KURANG
+    LABEL_COLUMNS,       # (opsional, kalau mau dipakai di template)
+    LABEL_DEFINITIONS
+)
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -77,18 +85,24 @@ def forecast():
 # === HALAMAN KLASIFIKASI (kosong dulu, bisa dikembangkan nanti) ===
 @app.route('/klasifikasi', methods=['GET', 'POST'])
 def klasifikasi():
-    models = [f.split('_scaler')[0] for f in os.listdir(app.config['MODEL_DIR']) 
-              if f.endswith('_scaler.pkl') and '_clf' not in f]
+    # Daftar model klasifikasi
     clf_models = [f.split('_clf')[0] for f in os.listdir(app.config['MODEL_DIR']) 
                   if f.endswith('_clf.h5')]
     
     results = None
     error = None
     prediction = None
+    default_values = [
+        43.98, 43.98, 56.09, 54.08, 54.95,
+        73.87, 71.09, 72.15, -0.82, 59.98,
+        112.93, 816.39, 126.12, 220.27, 219.72, 219.81,
+        938.66, 815.11, 0.00, 0.00, 35472.18
+    ]
 
     if request.method == 'POST':
         action = request.form.get('action')
 
+        # === TRAIN DARI CSV (tetap ada) ===
         if action == 'train_clf':
             file = request.files['file']
             model_name = request.form['model_name'].strip()
@@ -107,15 +121,21 @@ def klasifikasi():
                 except Exception as e:
                     error = str(e)
 
-        elif action == 'predict_clf':
-            file = request.files['file']
-            model_name = request.form['model_select']
-            if not file or not model_name:
-                error = "File dan model wajib dipilih!"
+        # === PREDIKSI MANUAL ===
+        elif action == 'predict_manual':
+            model_name = request.form.get('model_select')
+            if not model_name:
+                error = "Pilih model terlebih dahulu!"
             else:
                 try:
-                    df_stream = io.BytesIO(file.read())
-                    prediction = clf_predict(df_stream, model_name, app.config['MODEL_DIR'])
+                    values = []
+                    for col in TARGET_COLUMNS:
+                        val = request.form.get(col)
+                        if val is None or val.strip() == '':
+                            raise ValueError(f"Nilai {col} tidak boleh kosong!")
+                        values.append(float(val))
+                    
+                    prediction = predict_manual(values, model_name, app.config['MODEL_DIR'])
                 except Exception as e:
                     error = str(e)
 
@@ -123,7 +143,9 @@ def klasifikasi():
                            models=clf_models,
                            results=results,
                            error=error,
-                           prediction=prediction)
+                           prediction=prediction,
+                           default_values=default_values,
+                           target_columns=TARGET_COLUMNS)
 
 if __name__ == '__main__':
     print("Akses: http://127.0.0.1:5000")

@@ -3,16 +3,19 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Klasifikasi Fault SIV</title>
+    <title>Klasifikasi Fault SIV - Input Manual</title>
     <style>
         body { font-family: Arial; margin: 40px; background: #f8f9fa; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h1, h2 { color: #2c3e50; }
-        .form-group { margin: 15px 0; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select, button { padding: 10px; width: 100%; margin-top: 5px; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #c0392b; }
+        .form-group { margin: 12px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-group label { font-weight: bold; font-size: 0.9em; }
+        .form-group input { padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9em; }
+        button { padding: 12px; margin: 10px 5px 10px 0; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-predict { background: #e74c3c; color: white; }
+        .btn-predict:hover { background: #c0392b; }
+        .btn-clear { background: #95a5a6; color: white; }
+        .btn-clear:hover { background: #7f8c8d; }
         .result, .error { padding: 15px; margin: 15px 0; border-radius: 5px; }
         .result { background: #fadbd8; border: 1px solid #e74c3c; }
         .error { background: #fadbd8; border: 1px solid #e74c3c; color: #c0392b; }
@@ -20,105 +23,120 @@
         .back a { color: #3498db; text-decoration: none; font-weight: bold; }
         .fault { color: #e74c3c; font-weight: bold; }
         .safe { color: #27ae60; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #f2f2f2; }
+        .prob { font-size: 0.8em; color: #7f8c8d; }
     </style>
+    <script>
+        function clearAll() {
+            document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+        }
+    </script>
 </head>
 <body>
 <div class="container">
     <h1>Klasifikasi Fault SIV</h1>
 
-    <!-- TRAIN MODEL -->
-    <h2>1. Train Model Klasifikasi</h2>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="action" value="train_clf">
-        <div class="form-group">
-            <label>Upload CSV (dengan label fault)</label>
-            <input type="file" name="file" accept=".csv" required>
-        </div>
-        <div class="form-group">
-            <label>Nama Model (contoh: clf_v1)</label>
-            <input type="text" name="model_name" placeholder="clf_januari" required>
-        </div>
-        <button type="submit">Train Model</button>
-    </form>
+    <!-- TRAIN MODEL (CSV) -->
+    <details>
+        <summary><h2>1. Train Model dari CSV (Opsional)</h2></summary>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="train_clf">
+            <div class="form-group">
+                <label>Upload CSV (dengan label)</label>
+                <input type="file" name="file" accept=".csv">
+            </div>
+            <div class="form-group">
+                <label>Nama Model</label>
+                <input type="text" name="model_name" placeholder="clf_v1">
+            </div>
+            <button type="submit" class="btn-predict">Train Model</button>
+        </form>
+    </details>
 
-    <!-- PREDICT -->
-    <h2>2. Prediksi Fault dari Data Baru</h2>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="action" value="predict_clf">
+    <hr>
+
+    <!-- PREDIKSI MANUAL -->
+    <h2>2. Prediksi Manual</h2>
+    <form method="POST">
+        <input type="hidden" name="action" value="predict_manual">
+        
         <div class="form-group">
             <label>Pilih Model</label>
-            <select name="model_select" required>
-                <option value="">-- Pilih Model Klasifikasi --</option>
+            <select name="model_select" required style="width:100%; padding:8px;">
+                <option value="">-- Pilih Model --</option>
                 {% for model in models %}
                 <option value="{{ model }}">{{ model }}</option>
                 {% endfor %}
             </select>
         </div>
+
+        <h3>Masukkan Nilai Sensor (21 Parameter)</h3>
         <div class="form-group">
-            <label>Upload CSV Baru (tanpa label)</label>
-            <input type="file" name="file" accept=".csv" required>
+            {% for i in range(0, target_columns|length, 2) %}
+            <div>
+                <label>{{ target_columns[i] }}</label>
+                <input type="number" step="0.01" name="{{ target_columns[i] }}" value="{{ default_values[i] }}" required>
+            </div>
+            {% if i+1 < target_columns|length %}
+            <div>
+                <label>{{ target_columns[i+1] }}</label>
+                <input type="number" step="0.01" name="{{ target_columns[i+1] }}" value="{{ default_values[i+1] }}" required>
+            </div>
+            {% endif %}
+            {% endfor %}
         </div>
-        <button type="submit">Prediksi Fault</button>
+
+        <button type="submit" class="btn-predict">Prediksi Sekarang</button>
+        <button type="button" class="btn-clear" onclick="clearAll()">Kosongkan Nilai</button>
     </form>
 
     <!-- HASIL TRAINING -->
     {% if results %}
     <div class="result">
-        <strong>Training Klasifikasi Berhasil!</strong><br>
-        Model: <strong>{{ results.model_name }}</strong><br>
+        <strong>Training Berhasil!</strong><br>
+        Model: <strong>{{ results.model_name }}</strong> | 
         Data: {{ results.data_count }} baris | 
-        Accuracy: {{ "%.4f"|format(results.accuracy) }} | 
-        Loss: {{ "%.6f"|format(results.loss) }}
+        Accuracy: {{ "%.4f"|format(results.accuracy) }}
     </div>
     {% endif %}
 
     <!-- HASIL PREDIKSI -->
     {% if prediction %}
     <div class="result">
-        <h3>Prediksi Fault (10 Baris Pertama)</h3>
-        <table>
+        <h3>Hasil Prediksi Fault</h3>
+        <table style="width:100%; border-collapse: collapse; margin:15px 0;">
             <tr>
-                <th>Baris</th>
-                {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
-                                 'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
-                <th>{{ label }}</th>
-                {% endfor %}
+                <th>Parameter</th>
+                <th>Status</th>
+                <th>Probabilitas</th>
             </tr>
-            {% for i, row in enumerate(prediction) %}
+            {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
+                             'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
             <tr>
-                <td>{{ i+1 }}</td>
-                {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
-                                 'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
+                <td><strong>{{ label }}</strong></td>
                 <td>
-                    {% if row[label] == 1 %}
+                    {% if prediction[label] == 1 %}
                     <span class="fault">ERROR</span>
                     {% else %}
                     <span class="safe">OK</span>
                     {% endif %}
                 </td>
-                {% endfor %}
+                <td class="prob">{{ prediction.probabilities[label] }}</td>
             </tr>
             {% endfor %}
         </table>
 
-        <details style="margin-top: 15px;">
-            <summary><strong>Penjelasan Fault yang Terdeteksi</strong></summary>
+        {% if prediction.definitions %}
+        <details>
+            <summary><strong>Penjelasan Fault</strong></summary>
             <ul>
-                {% for row in prediction %}
-                    {% if row.definitions %}
-                        {% for label, desc in row.definitions.items() %}
-                        <li><strong>{{ label }}</strong>: {{ desc }}</li>
-                        {% endfor %}
-                    {% endif %}
+                {% for label, desc in prediction.definitions.items() %}
+                <li><strong>{{ label }}</strong>: {{ desc }}</li>
                 {% endfor %}
-                {% if not prediction|selectattr("definitions")|list %}
-                <li><em>Tidak ada fault terdeteksi pada 10 baris pertama.</em></li>
-                {% endif %}
             </ul>
         </details>
+        {% else %}
+        <p><em>Tidak ada fault terdeteksi.</em></p>
+        {% endif %}
     </div>
     {% endif %}
 
