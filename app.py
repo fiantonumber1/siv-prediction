@@ -153,5 +153,5 @@ def klasifikasi():
                            target_columns=TARGET_COLUMNS)
 
 if __name__ == '__main__':
-    print("Akses: http://127.0.0.1:5000")
-    app.run(debug=True)
+    print("Akses: http://0.0.0.0:5132")
+    app.run(host='0.0.0.0', port=5132, debug=False)  # debug=False untuk production
