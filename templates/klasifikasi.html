@@ -3,152 +3,646 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Klasifikasi Fault SIV - Input Manual</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial; margin: 40px; background: #f8f9fa; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; }
-        .form-group { margin: 12px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .form-group label { font-weight: bold; font-size: 0.9em; }
-        .form-group input { padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9em; }
-        button { padding: 12px; margin: 10px 5px 10px 0; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-predict { background: #e74c3c; color: white; }
-        .btn-predict:hover { background: #c0392b; }
-        .btn-clear { background: #95a5a6; color: white; }
-        .btn-clear:hover { background: #7f8c8d; }
-        .result, .error { padding: 15px; margin: 15px 0; border-radius: 5px; }
-        .result { background: #fadbd8; border: 1px solid #e74c3c; }
-        .error { background: #fadbd8; border: 1px solid #e74c3c; color: #c0392b; }
-        .back { margin-top: 30px; text-align: center; }
-        .back a { color: #3498db; text-decoration: none; font-weight: bold; }
-        .fault { color: #e74c3c; font-weight: bold; }
-        .safe { color: #27ae60; font-weight: bold; }
-        .prob { font-size: 0.8em; color: #7f8c8d; }
-    </style>
-    <script>
-        function clearAll() {
-            document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #06b6d4;
+            --light-color: #f8fafc;
+            --dark-color: #1e293b;
+            --border-radius: 12px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-    </script>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color), var(--danger-color));
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .header h1 {
+            color: var(--dark-color);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+        }
+
+        details {
+            background: white;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        details:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        summary {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.3s ease;
+        }
+
+        summary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        }
+
+        summary::marker {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        details[open] summary {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+        }
+
+        .form-container {
+            padding: 25px;
+            background: var(--light-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group.full-width {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .sensor-input {
+            background: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .sensor-input:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .sensor-input label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+
+        .sensor-input input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-predict {
+            background: linear-gradient(135deg, var(--danger-color), #dc2626);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-predict:hover {
+            background: linear-gradient(135deg, #dc2626, var(--danger-color));
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, var(--secondary-color), #475569);
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: linear-gradient(135deg, #475569, var(--secondary-color));
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, var(--primary-color));
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .result, .error {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 5px solid var(--warning-color);
+            color: var(--dark-color);
+        }
+
+        .result.success {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-left: 5px solid var(--success-color);
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-left: 5px solid var(--danger-color);
+            color: #991b1b;
+        }
+
+        .result h3,
+        .error h3 {
+            margin-bottom: 15px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .result-table th {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .result-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .result-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .result-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-fault {
+            color: var(--danger-color);
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: rgba(239, 68, 68, 0.1);
+            display: inline-block;
+        }
+
+        .status-safe {
+            color: var(--success-color);
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            display: inline-block;
+        }
+
+        .prob {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+            font-family: 'Courier New', monospace;
+            background: rgba(148, 163, 184, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .back {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .back a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            padding: 12px 24px;
+            border: 2px solid var(--primary-color);
+            border-radius: var(--border-radius);
+        }
+
+        .back a:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .sensor-section {
+            background: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .sensor-section h3 {
+            color: var(--dark-color);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
+            animation: progress 3s ease-in-out;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            button {
+                justify-content: center;
+            }
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-    <h1>Klasifikasi Fault SIV</h1>
-
-    <!-- TRAIN MODEL (CSV) -->
-    <details>
-        <summary><h2>1. Train Model dari CSV (Opsional)</h2></summary>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="train_clf">
-            <div class="form-group">
-                <label>Upload CSV (dengan label)</label>
-                <input type="file" name="file" accept=".csv">
-            </div>
-            <div class="form-group">
-                <label>Nama Model</label>
-                <input type="text" name="model_name" placeholder="clf_v1">
-            </div>
-            <button type="submit" class="btn-predict">Train Model</button>
-        </form>
-    </details>
-
-    <hr>
-
-    <!-- PREDIKSI MANUAL -->
-    <h2>2. Prediksi Manual</h2>
-    <form method="POST">
-        <input type="hidden" name="action" value="predict_manual">
-        
-        <div class="form-group">
-            <label>Pilih Model</label>
-            <select name="model_select" required style="width:100%; padding:8px;">
-                <option value="">-- Pilih Model --</option>
-                {% for model in models %}
-                <option value="{{ model }}">{{ model }}</option>
-                {% endfor %}
-            </select>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cogs"></i> Klasifikasi Fault SIV</h1>
+            <p>Sistem Deteksi Kegagalan Secondary Inverter</p>
         </div>
 
-        <h3>Masukkan Nilai Sensor (21 Parameter)</h3>
-        <div class="form-group">
-            {% for i in range(0, target_columns|length, 2) %}
-            <div>
-                <label>{{ target_columns[i] }}</label>
-                <input type="number" step="0.01" name="{{ target_columns[i] }}" value="{{ default_values[i] }}" required>
+        <!-- TRAIN MODEL (CSV) -->
+        <details>
+            <summary>
+                <i class="fas fa-brain"></i>
+                1. Training Model dari CSV (Opsional)
+            </summary>
+            <div class="form-container">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="train_clf">
+                    <div class="form-group full-width">
+                        <label for="file"><i class="fas fa-file-csv"></i> Upload File CSV (dengan label)</label>
+                        <input type="file" id="file" name="file" accept=".csv" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="model_name"><i class="fas fa-tag"></i> Nama Model</label>
+                        <input type="text" id="model_name" name="model_name" placeholder="clf_v1" required>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn-predict">
+                            <i class="fas fa-rocket"></i> Train Model
+                        </button>
+                    </div>
+                </form>
             </div>
-            {% if i+1 < target_columns|length %}
-            <div>
-                <label>{{ target_columns[i+1] }}</label>
-                <input type="number" step="0.01" name="{{ target_columns[i+1] }}" value="{{ default_values[i+1] }}" required>
+        </details>
+
+        <hr style="border: none; height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0, transparent); margin: 30px 0;">
+
+        <!-- PREDIKSI MANUAL -->
+        <div class="sensor-section">
+            <h3><i class="fas fa-chart-line"></i> 2. Prediksi Manual</h3>
+            
+            <form method="POST">
+                <input type="hidden" name="action" value="predict_manual">
+                
+                <div class="form-group full-width">
+                    <label for="model_select"><i class="fas fa-cog"></i> Pilih Model</label>
+                    <select id="model_select" name="model_select" required>
+                        <option value="">-- Pilih Model Klasifikasi --</option>
+                        {% for model in models %}
+                        <option value="{{ model }}">{{ model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <h3><i class="fas fa-microchip"></i> Input Data Sensor (21 Parameter)</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                
+                <div class="form-grid">
+                    {% for i in range(0, target_columns|length, 2) %}
+                    <div class="sensor-input">
+                        <label>{{ target_columns[i] }}</label>
+                        <input type="number" step="0.01" name="{{ target_columns[i] }}" value="{{ default_values[i] }}" required>
+                    </div>
+                    {% if i+1 < target_columns|length %}
+                    <div class="sensor-input">
+                        <label>{{ target_columns[i+1] }}</label>
+                        <input type="number" step="0.01" name="{{ target_columns[i+1] }}" value="{{ default_values[i+1] }}" required>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn-predict">
+                        <i class="fas fa-play-circle"></i> Jalankan Prediksi
+                    </button>
+                    <button type="button" class="btn-clear" onclick="clearAll()">
+                        <i class="fas fa-eraser"></i> Reset Semua
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- HASIL TRAINING -->
+        {% if results %}
+        <div class="result success">
+            <h3><i class="fas fa-check-circle"></i> Training Model Berhasil!</h3>
+            <p><strong><i class="fas fa-tag"></i> Model:</strong> {{ results.model_name }}</p>
+            <p><strong><i class="fas fa-database"></i> Jumlah Data:</strong> {{ results.data_count }} baris</p>
+            <p><strong><i class="fas fa-chart-bar"></i> Akurasi Model:</strong> 
+                <span style="color: var(--success-color); font-weight: bold;">{{ "%.4f"|format(results.accuracy * 100) }}%</span>
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- HASIL PREDIKSI -->
+        {% if prediction %}
+        <div class="result">
+            <h3><i class="fas fa-search"></i> Hasil Analisis Fault Detection</h3>
+            
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-cog"></i> Parameter Fault</th>
+                        <th><i class="fas fa-exclamation-triangle"></i> Status</th>
+                        <th><i class="fas fa-percentage"></i> Probabilitas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
+                                     'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
+                    <tr>
+                        <td><strong>{{ label }}</strong></td>
+                        <td>
+                            {% if prediction[label] == 1 %}
+                            <span class="status-fault"><i class="fas fa-times-circle"></i> ERROR</span>
+                            {% else %}
+                            <span class="status-safe"><i class="fas fa-check-circle"></i> OK</span>
+                            {% endif %}
+                        </td>
+                        <td class="prob">{{ "%.2f"|format(prediction.probabilities[label] * 100) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if prediction.definitions %}
+            <details style="margin-top: 20px;">
+                <summary style="padding: 15px; background: linear-gradient(135deg, var(--info-color), #0891b2); color: white; border-radius: var(--border-radius); cursor: pointer;">
+                    <i class="fas fa-info-circle"></i> <strong>Detail Penjelasan Fault</strong>
+                </summary>
+                <div style="padding: 20px; background: var(--light-color);">
+                    <ul style="list-style: none; padding: 0;">
+                        {% for label, desc in prediction.definitions.items() %}
+                        <li style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 8px; border-left: 4px solid var(--info-color);">
+                            <strong>{{ label }}</strong>: {{ desc }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </details>
+            {% else %}
+            <div style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; margin-top: 15px;">
+                <i class="fas fa-thumbs-up" style="font-size: 2rem; color: var(--success-color); margin-bottom: 10px;"></i>
+                <p style="color: var(--success-color); font-weight: 600;"><em>Tidak ada fault terdeteksi. Sistem dalam kondisi normal!</em></p>
             </div>
             {% endif %}
-            {% endfor %}
         </div>
-
-        <button type="submit" class="btn-predict">Prediksi Sekarang</button>
-        <button type="button" class="btn-clear" onclick="clearAll()">Kosongkan Nilai</button>
-    </form>
-
-    <!-- HASIL TRAINING -->
-    {% if results %}
-    <div class="result">
-        <strong>Training Berhasil!</strong><br>
-        Model: <strong>{{ results.model_name }}</strong> | 
-        Data: {{ results.data_count }} baris | 
-        Accuracy: {{ "%.4f"|format(results.accuracy) }}
-    </div>
-    {% endif %}
-
-    <!-- HASIL PREDIKSI -->
-    {% if prediction %}
-    <div class="result">
-        <h3>Hasil Prediksi Fault</h3>
-        <table style="width:100%; border-collapse: collapse; margin:15px 0;">
-            <tr>
-                <th>Parameter</th>
-                <th>Status</th>
-                <th>Probabilitas</th>
-            </tr>
-            {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
-                             'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
-            <tr>
-                <td><strong>{{ label }}</strong></td>
-                <td>
-                    {% if prediction[label] == 1 %}
-                    <span class="fault">ERROR</span>
-                    {% else %}
-                    <span class="safe">OK</span>
-                    {% endif %}
-                </td>
-                <td class="prob">{{ prediction.probabilities[label] }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-
-        {% if prediction.definitions %}
-        <details>
-            <summary><strong>Penjelasan Fault</strong></summary>
-            <ul>
-                {% for label, desc in prediction.definitions.items() %}
-                <li><strong>{{ label }}</strong>: {{ desc }}</li>
-                {% endfor %}
-            </ul>
-        </details>
-        {% else %}
-        <p><em>Tidak ada fault terdeteksi.</em></p>
         {% endif %}
-    </div>
-    {% endif %}
 
-    {% if error %}
-    <div class="error">
-        <strong>Error:</strong> {{ error }}
-    </div>
-    {% endif %}
+        {% if error %}
+        <div class="error">
+            <h3><i class="fas fa-exclamation-triangle"></i> Terjadi Kesalahan</h3>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
 
-    <div class="back">
-        <a href="{{ url_for('dashboard') }}">Kembali ke Dashboard</a>
+        <div class="back">
+            <a href="{{ url_for('dashboard') }}">
+                <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
+            </a>
+        </div>
     </div>
-</div>
+
+    <script>
+        function clearAll() {
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.value = '';
+            });
+            
+            // Tambahkan animasi saat clear
+            document.querySelectorAll('.sensor-input').forEach(input => {
+                input.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    input.style.transform = 'scale(1)';
+                }, 150);
+            });
+        }
+
+        // Animasi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.6s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+        });
+
+        // Auto-hide success message setelah 5 detik
+        setTimeout(() => {
+            const successMsg = document.querySelector('.result.success');
+            if (successMsg) {
+                successMsg.style.transition = 'opacity 0.5s ease';
+                successMsg.style.opacity = '0';
+                setTimeout(() => {
+                    successMsg.style.display = 'none';
+                }, 500);
+            }
+        }, 5000);
+    </script>
 </body>
 </html>

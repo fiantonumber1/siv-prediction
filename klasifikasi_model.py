@@ -79,7 +79,7 @@ def train_and_save(df_stream, model_name, model_dir):
     joblib.dump(scaler, scaler_path)
 
     # Evaluasi
-    loss, acc = model.evaluate(X_scaled, y, verbose=0)
+    loss, acc = model.evaluate(X_scaled, y, verbose=1)
     return {"accuracy": acc, "loss": loss, "data_count": len(df)}
 
 def predict_with_model(df_stream, model_name, model_dir):
