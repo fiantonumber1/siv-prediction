@@ -100,30 +100,7 @@
             {% endif %}
 
             {% if result %}
-            <!-- HASIL FORECAST -->
-            <div class="card">
-                <h3>Hasil Forecast ({{ result.forecast.steps }} Langkah)</h3>
-                <p><strong>Prediksi terakhir ({{ result.forecast.last_step }}) digunakan untuk klasifikasi.</strong></p>
-                <table>
-                    <thead>
-                        <tr><th>Langkah</th>
-                            {% for col in result.forecast.prediction_dict['Step 1'] %}
-                            <th>{{ col }}</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for step, values in result.forecast.prediction_dict.items() %}
-                        <tr {% if step == result.forecast.last_step %}style="background: #e3f2fd; font-weight: 600;"{% endif %}>
-                            <td><strong>{{ step }}</strong></td>
-                            {% for col, val in values.items() %}
-                            <td>{{ val }}</td>
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+           
 
             <!-- GRAFIK -->
             <div class="plot">
@@ -133,49 +110,20 @@
 
             <!-- HASIL KLASIFIKASI -->
             <!-- HASIL KLASIFIKASI PER LANGKAH -->
+            <!-- GANTI BAGIAN INI: Hasil Klasifikasi Otomatis -->
+            <!-- GANTI BAGIAN PLOT KLASIFIKASI -->
             <div class="card">
-                <h3>Klasifikasi Otomatis per Langkah Prediksi</h3>
-                {% for step_key, clf in result.classification_per_step.items() %}
-                <details style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
-                    <summary style="font-weight: 600; cursor: pointer; color: #4361ee;">
-                        {{ step_key }} → 
-                        {% if clf.definitions %}
-                            <span style="color: #e74c3c; font-weight: bold;">ADA FAULT</span>
-                        {% else %}
-                            <span style="color: #27ae60;">NORMAL</span>
-                        {% endif %}
-                    </summary>
-
-                    <div style="margin-top: 0.8rem; padding-left: 1rem;">
-                        {% if clf.definitions %}
-                        <div class="result danger" style="margin: 0.5rem 0;">
-                            <ul class="fault-list">
-                                {% for fault, desc in clf.definitions.items() %}
-                                <li><strong>{{ fault }}</strong>: {{ desc }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% else %}
-                        <div class="result success" style="margin: 0.5rem 0;">
-                            <p><strong>Sistem normal</strong> pada langkah ini.</p>
-                        </div>
-                        {% endif %}
-
-                        <details style="margin-top: 0.5rem; font-size: 0.9rem;">
-                            <summary>Detail Probabilitas</summary>
-                            <table style="font-size: 0.85rem;">
-                                <tr><th>Fault</th><th>Probabilitas</th></tr>
-                                {% for fault, prob in clf.probabilities.items() %}
-                                <tr>
-                                    <td><code>{{ fault }}</code></td>
-                                    <td>{{ "%.1f"|format(prob * 100) }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </table>
-                        </details>
-                    </div>
-                </details>
-                {% endfor %}
+                <h3>Klasifikasi Fault per Langkah</h3>
+                <div class="plot">
+                    {{ fault_plot_html | safe }}
+                </div>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-top: 1rem; font-size: 0.9rem;">
+                    <span><strong style="color: #27ae60;">HIJAU</strong> = Normal (0)</span>
+                    <span><strong style="color: #e74c3c;">MERAH</strong> = Fault (1)</span>
+                </div>
+                <p style="text-align: center; font-size: 0.85rem; color: #7f8c8d; margin-top: 0.5rem;">
+                    Hover pada bar untuk lihat nama fault & probabilitas
+                </p>
             </div>
             {% endif %}
 
