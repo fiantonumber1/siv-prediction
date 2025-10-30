@@ -3,19 +3,134 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Klasifikasi - Coming Soon</title>
+    <title>Klasifikasi Fault SIV</title>
     <style>
-        body { font-family: Arial; background: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #e74c3c; }
-        a { color: #3498db; text-decoration: none; font-weight: bold; }
+        body { font-family: Arial; margin: 40px; background: #f8f9fa; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { padding: 10px; width: 100%; margin-top: 5px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #c0392b; }
+        .result, .error { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .result { background: #fadbd8; border: 1px solid #e74c3c; }
+        .error { background: #fadbd8; border: 1px solid #e74c3c; color: #c0392b; }
+        .back { margin-top: 30px; text-align: center; }
+        .back a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .fault { color: #e74c3c; font-weight: bold; }
+        .safe { color: #27ae60; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
     </style>
 </head>
 <body>
-<div class="box">
-    <h1>Modul Klasifikasi</h1>
-    <p>Fitur ini sedang dalam pengembangan.</p>
-    <p><a href="{{ url_for('dashboard') }}">Kembali ke Dashboard</a></p>
+<div class="container">
+    <h1>Klasifikasi Fault SIV</h1>
+
+    <!-- TRAIN MODEL -->
+    <h2>1. Train Model Klasifikasi</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="train_clf">
+        <div class="form-group">
+            <label>Upload CSV (dengan label fault)</label>
+            <input type="file" name="file" accept=".csv" required>
+        </div>
+        <div class="form-group">
+            <label>Nama Model (contoh: clf_v1)</label>
+            <input type="text" name="model_name" placeholder="clf_januari" required>
+        </div>
+        <button type="submit">Train Model</button>
+    </form>
+
+    <!-- PREDICT -->
+    <h2>2. Prediksi Fault dari Data Baru</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="predict_clf">
+        <div class="form-group">
+            <label>Pilih Model</label>
+            <select name="model_select" required>
+                <option value="">-- Pilih Model Klasifikasi --</option>
+                {% for model in models %}
+                <option value="{{ model }}">{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Upload CSV Baru (tanpa label)</label>
+            <input type="file" name="file" accept=".csv" required>
+        </div>
+        <button type="submit">Prediksi Fault</button>
+    </form>
+
+    <!-- HASIL TRAINING -->
+    {% if results %}
+    <div class="result">
+        <strong>Training Klasifikasi Berhasil!</strong><br>
+        Model: <strong>{{ results.model_name }}</strong><br>
+        Data: {{ results.data_count }} baris | 
+        Accuracy: {{ "%.4f"|format(results.accuracy) }} | 
+        Loss: {{ "%.6f"|format(results.loss) }}
+    </div>
+    {% endif %}
+
+    <!-- HASIL PREDIKSI -->
+    {% if prediction %}
+    <div class="result">
+        <h3>Prediksi Fault (10 Baris Pertama)</h3>
+        <table>
+            <tr>
+                <th>Baris</th>
+                {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
+                                 'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
+                <th>{{ label }}</th>
+                {% endfor %}
+            </tr>
+            {% for i, row in enumerate(prediction) %}
+            <tr>
+                <td>{{ i+1 }}</td>
+                {% for label in ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres',
+                                 'Ux_SIV_MajorBCFltPres', 'Ux_SIV_MajorInputConvFltPres', 'Ux_SIV_MajorInverterFltPres'] %}
+                <td>
+                    {% if row[label] == 1 %}
+                    <span class="fault">ERROR</span>
+                    {% else %}
+                    <span class="safe">OK</span>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+
+        <details style="margin-top: 15px;">
+            <summary><strong>Penjelasan Fault yang Terdeteksi</strong></summary>
+            <ul>
+                {% for row in prediction %}
+                    {% if row.definitions %}
+                        {% for label, desc in row.definitions.items() %}
+                        <li><strong>{{ label }}</strong>: {{ desc }}</li>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+                {% if not prediction|selectattr("definitions")|list %}
+                <li><em>Tidak ada fault terdeteksi pada 10 baris pertama.</em></li>
+                {% endif %}
+            </ul>
+        </details>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="error">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="back">
+        <a href="{{ url_for('dashboard') }}">Kembali ke Dashboard</a>
+    </div>
 </div>
 </body>
 </html>

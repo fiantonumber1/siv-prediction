@@ -4,6 +4,8 @@ from werkzeug.utils import secure_filename
 import os
 import io
 from forecast_model import preprocess_data, train_and_save, predict_with_model
+# app.py (tambahkan ini)
+from klasifikasi_model import train_and_save as clf_train, predict_with_model as clf_predict
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -73,10 +75,55 @@ def forecast():
 
 
 # === HALAMAN KLASIFIKASI (kosong dulu, bisa dikembangkan nanti) ===
-@app.route('/klasifikasi')
+@app.route('/klasifikasi', methods=['GET', 'POST'])
 def klasifikasi():
-    return render_template('klasifikasi.html')  # Bisa dibuat nanti
+    models = [f.split('_scaler')[0] for f in os.listdir(app.config['MODEL_DIR']) 
+              if f.endswith('_scaler.pkl') and '_clf' not in f]
+    clf_models = [f.split('_clf')[0] for f in os.listdir(app.config['MODEL_DIR']) 
+                  if f.endswith('_clf.h5')]
+    
+    results = None
+    error = None
+    prediction = None
 
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'train_clf':
+            file = request.files['file']
+            model_name = request.form['model_name'].strip()
+            if not file or not model_name:
+                error = "File dan nama model wajib diisi!"
+            else:
+                try:
+                    df_stream = io.BytesIO(file.read())
+                    metrics = clf_train(df_stream, model_name, app.config['MODEL_DIR'])
+                    results = {
+                        "model_name": model_name,
+                        "accuracy": metrics['accuracy'],
+                        "loss": metrics['loss'],
+                        "data_count": metrics['data_count']
+                    }
+                except Exception as e:
+                    error = str(e)
+
+        elif action == 'predict_clf':
+            file = request.files['file']
+            model_name = request.form['model_select']
+            if not file or not model_name:
+                error = "File dan model wajib dipilih!"
+            else:
+                try:
+                    df_stream = io.BytesIO(file.read())
+                    prediction = clf_predict(df_stream, model_name, app.config['MODEL_DIR'])
+                except Exception as e:
+                    error = str(e)
+
+    return render_template('klasifikasi.html',
+                           models=clf_models,
+                           results=results,
+                           error=error,
+                           prediction=prediction)
 
 if __name__ == '__main__':
     print("Akses: http://127.0.0.1:5000")
