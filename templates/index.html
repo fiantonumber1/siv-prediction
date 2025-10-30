@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Prediksi SIV - Train & Predict</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #f8f9fa; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { padding: 10px; width: 100%; margin-top: 5px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2980b9; }
+        .result, .error { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .result { background: #d5f4e6; border: 1px solid #27ae60; }
+        .error { background: #fadbd8; border: 1px solid #e74c3c; color: #c0392b; }
+        .plot { margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Prediksi Parameter SIV</h1>
+
+    <!-- TRAIN MODEL -->
+    <h2>1. Train Model Baru</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="train">
+        <div class="form-group">
+            <label>Upload CSV (untuk training)</label>
+            <input type="file" name="file" accept=".csv" required>
+        </div>
+        <div class="form-group">
+            <label>Nama Model (contoh: model_v1)</label>
+            <input type="text" name="model_name" placeholder="model_januari" required>
+        </div>
+        <button type="submit">Train Model</button>
+    </form>
+
+    <!-- PREDICT -->
+    <h2>2. Prediksi dengan Model</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="predict">
+        <div class="form-group">
+            <label>Pilih Model</label>
+            <select name="model_select" required>
+                <option value="">-- Pilih Model --</option>
+                {% for model in models %}
+                <option value="{{ model }}">{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Upload CSV Baru (untuk prediksi)</label>
+            <input type="file" name="file" accept=".csv" required>
+        </div>
+        <button type="submit">Prediksi</button>
+    </form>
+
+    <!-- HASIL -->
+    {% if results %}
+    <div class="result">
+        <strong>Training Berhasil:</strong> {{ results }}
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="error">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    {% if prediction %}
+    <div class="result">
+        <h3>Prediksi 1 Langkah ke Depan</h3>
+        <ul>
+            {% for k, v in prediction.items() %}
+            <li><strong>{{ k }}</strong>: {{ v }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="plot">
+        {{ plot_html | safe }}
+    </div>
+    {% endif %}
+</div>
+</body>
+</html>
