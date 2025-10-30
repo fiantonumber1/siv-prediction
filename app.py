@@ -10,9 +10,7 @@ from klasifikasi_model import (
     train_and_save as clf_train,
     predict_with_model as clf_predict,
     predict_manual,
-    TARGET_COLUMNS,      # <--- INI YANG KURANG
-    LABEL_COLUMNS,       # (opsional, kalau mau dipakai di template)
-    LABEL_DEFINITIONS
+    TARGET_COLUMNS,    
 )
 
 app = Flask(__name__)
