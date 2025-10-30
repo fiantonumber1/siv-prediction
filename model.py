@@ -11,7 +11,12 @@ from tensorflow.keras.losses import MeanSquaredError
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from sklearn.metrics import r2_score
+import numpy as np
 
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100  # Hindari pembagian noly 0
 TARGET_COLUMNS = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
     'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
@@ -53,11 +58,13 @@ def train_and_save(df, model_name, model_dir="models"):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
     model = Sequential([
-        LSTM(64, input_shape=(WINDOW_SIZE, len(TARGET_COLUMNS))),
+        LSTM(64, return_sequences=True, input_shape=(WINDOW_SIZE, len(TARGET_COLUMNS))),
+        LSTM(64),
+        Dense(32, activation='relu'),
         Dense(len(TARGET_COLUMNS))
     ])
     model.compile(optimizer='adam', loss=MeanSquaredError())
-    model.fit(X_train, y_train, epochs=30, batch_size=64, validation_data=(X_test, y_test), verbose=1)
+    model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), verbose=1)
 
     # Simpan model dan scaler
     model_path = os.path.join(model_dir, f"{model_name}.h5")
@@ -69,14 +76,30 @@ def train_and_save(df, model_name, model_dir="models"):
     pred = model.predict(X_test)
     pred_inv = scaler.inverse_transform(pred)
     y_inv = scaler.inverse_transform(y_test)
+
     mae = mean_absolute_error(y_inv, pred_inv)
     mse = mean_squared_error(y_inv, pred_inv)
     rmse = np.sqrt(mse)
+    r2 = r2_score(y_inv, pred_inv)
+    mape = mean_absolute_percentage_error(y_inv, pred_inv)
+
+    # R² dan MAPE per kolom
+    r2_per_col = [r2_score(y_inv[:, i], pred_inv[:, i]) for i in range(len(TARGET_COLUMNS))]
+    mape_per_col = []
+    for i in range(len(TARGET_COLUMNS)):
+        col_true = y_inv[:, i]
+        col_pred = pred_inv[:, i]
+        mape_col = np.mean(np.abs((col_true - col_pred) / (col_true + 1e-8))) * 100
+        mape_per_col.append(mape_col)
 
     return {
         "mae": round(mae, 4),
         "mse": round(mse, 4),
         "rmse": round(rmse, 4),
+        "r2": round(r2, 4),
+        "mape": round(mape, 2),
+        "r2_per_col": dict(zip(TARGET_COLUMNS, [round(x, 3) for x in r2_per_col])),
+        "mape_per_col": dict(zip(TARGET_COLUMNS, [round(x, 2) for x in mape_per_col])),
         "model_path": model_path
     }
 

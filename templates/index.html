@@ -61,7 +61,28 @@
     <!-- HASIL -->
     {% if results %}
     <div class="result">
-        <strong>Training Berhasil:</strong> {{ results }}
+        <strong>Training Berhasil:</strong><br>
+        Model: <strong>{{ results.model_name }}</strong><br>
+        MAE: {{ results.mae }} | RMSE: {{ results.rmse }} | 
+        R²: {{ results.r2 }} | MAPE: {{ results.mape }}%<br><br>
+        
+        <details>
+            <summary><strong>R² per Parameter (klik untuk detail)</strong></summary>
+            <ul>
+                {% for col, val in results.r2_per_col.items() %}
+                <li><strong>{{ col }}</strong>: {{ val }}</li>
+                {% endfor %}
+            </ul>
+        </details>
+
+        <details>
+            <summary><strong>MAPE per Parameter (%)</strong></summary>
+            <ul>
+                {% for col, val in results.mape_per_col.items() %}
+                <li><strong>{{ col }}</strong>: {{ val }}%</li>
+                {% endfor %}
+            </ul>
+        </details>
     </div>
     {% endif %}
 

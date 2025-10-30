@@ -30,8 +30,17 @@ def index():
             else:
                 try:
                     df = preprocess_data(io.StringIO(file.stream.read().decode('utf-8')))
+                   # Di dalam action == 'train'
                     metrics = train_and_save(df, model_name, app.config['MODEL_DIR'])
-                    results = f"Model '{model_name}' berhasil dilatih! MAE: {metrics['mae']}, RMSE: {metrics['rmse']}"
+                    results = {
+                        "model_name": model_name,
+                        "mae": metrics['mae'],
+                        "rmse": metrics['rmse'],
+                        "r2": metrics['r2'],
+                        "mape": metrics['mape'],
+                        "r2_per_col": metrics['r2_per_col'],
+                        "mape_per_col": metrics['mape_per_col']
+                    }
                 except Exception as e:
                     error = str(e)
 
