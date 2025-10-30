@@ -3,7 +3,7 @@ from flask import Flask, request, render_template, send_from_directory, redirect
 from werkzeug.utils import secure_filename
 import os
 import io
-from model import preprocess_data, train_and_save, predict_with_model
+from forecast_model import preprocess_data, train_and_save, predict_with_model
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
