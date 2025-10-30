@@ -11,8 +11,16 @@ app.config['MODEL_DIR'] = 'models'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['MODEL_DIR'], exist_ok=True)
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
+
+# === HALAMAN UTAMA (DASHBOARD) ===
+@app.route('/')
+def dashboard():
+    return render_template('dashboard.html')  # Halaman awal dengan tombol Forecast/Klasifikasi
+
+
+# === HALAMAN FORECAST ===
+@app.route('/forecast', methods=['GET', 'POST'])
+def forecast():
     models = [f.split('_scaler')[0] for f in os.listdir(app.config['MODEL_DIR']) if f.endswith('_scaler.pkl')]
     results = None
     error = None
@@ -30,7 +38,6 @@ def index():
             else:
                 try:
                     df = preprocess_data(io.StringIO(file.stream.read().decode('utf-8')))
-                   # Di dalam action == 'train'
                     metrics = train_and_save(df, model_name, app.config['MODEL_DIR'])
                     results = {
                         "model_name": model_name,
@@ -47,7 +54,7 @@ def index():
         elif action == 'predict':
             file = request.files['file']
             model_name = request.form['model_select']
-            steps = int(request.form.get('steps', 1))  # ← ambil dari input HTML
+            steps = int(request.form.get('steps', 1))
             if not file or not model_name:
                 error = "File dan model wajib dipilih!"
             else:
@@ -57,13 +64,19 @@ def index():
                 except Exception as e:
                     error = str(e)
 
+    return render_template('forecast.html', 
+                           models=models, 
+                           results=results, 
+                           error=error, 
+                           plot_html=plot_html, 
+                           prediction=prediction)
 
-    return render_template('index.html', 
-                         models=models, 
-                         results=results, 
-                         error=error, 
-                         plot_html=plot_html, 
-                         prediction=prediction)
+
+# === HALAMAN KLASIFIKASI (kosong dulu, bisa dikembangkan nanti) ===
+@app.route('/klasifikasi')
+def klasifikasi():
+    return render_template('klasifikasi.html')  # Bisa dibuat nanti
+
 
 if __name__ == '__main__':
     print("Akses: http://127.0.0.1:5000")

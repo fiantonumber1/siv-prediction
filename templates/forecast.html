@@ -1,8 +1,9 @@
+<!-- templates/forecast.html -->
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Prediksi SIV - Train & Predict</title>
+    <title>Prediksi SIV - Forecast</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body { font-family: Arial; margin: 40px; background: #f8f9fa; }
@@ -17,6 +18,9 @@
         .result { background: #d5f4e6; border: 1px solid #27ae60; }
         .error { background: #fadbd8; border: 1px solid #e74c3c; color: #c0392b; }
         .plot { margin-top: 20px; }
+        .back { margin-top: 30px; text-align: center; }
+        .back a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .back a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -38,7 +42,6 @@
         <button type="submit">Train Model</button>
     </form>
 
-   
     <!-- PREDICT -->
     <h2>2. Prediksi dengan Model</h2>
     <form method="POST" enctype="multipart/form-data">
@@ -62,7 +65,6 @@
         </div>
         <button type="submit">Prediksi</button>
     </form>
-
 
     <!-- HASIL -->
     {% if results %}
@@ -100,7 +102,7 @@
 
     {% if prediction %}
     <div class="result">
-        <h3>Prediksi 1 Langkah ke Depan</h3>
+        <h3>Prediksi {{ 'Langkah' if prediction|length == 1 else 'Langkah-Langkah' }} ke Depan</h3>
         <ul>
             {% for k, v in prediction.items() %}
             <li><strong>{{ k }}</strong>: {{ v }}</li>
@@ -111,6 +113,10 @@
         {{ plot_html | safe }}
     </div>
     {% endif %}
+
+    <div class="back">
+        <a href="{{ url_for('dashboard') }}">Kembali ke Dashboard</a>
+    </div>
 </div>
 </body>
 </html>
