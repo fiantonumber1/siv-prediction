@@ -1,4 +1,6 @@
 # app.py
+
+
 from flask import Flask, request, render_template, send_from_directory, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
@@ -13,12 +15,17 @@ from klasifikasi_model import (
     TARGET_COLUMNS,    
 )
 
+
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MODEL_DIR'] = 'models'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['MODEL_DIR'], exist_ok=True)
 
+# === IMPORT & REGISTER BLUEPRINT ===
+from routes_integrated import integrated_bp
+app.register_blueprint(integrated_bp)
 
 # === HALAMAN UTAMA (DASHBOARD) ===
 @app.route('/')

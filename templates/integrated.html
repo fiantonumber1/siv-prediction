@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated: Forecast + Klasifikasi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee; --success: #06d6a0; --danger: #ef476f; --warning: #ffd166;
+            --dark: #2b2d42; --light: #f8f9fa; --gray: #8d99ae; --border: #dee2e6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); color: var(--dark); padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        header { background: var(--primary); color: white; padding: 1.5rem; text-align: center; }
+        header h1 { font-size: 1.8rem; font-weight: 700; margin: 0; }
+        .content { padding: 2rem; }
+        .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; transition: all 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .card h2 { color: var(--primary); font-size: 1.3rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-weight: 600; color: var(--dark); margin-bottom: 6px; font-size: 0.95rem; }
+        input, select, button { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; transition: 0.2s; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67,97,238,0.15); }
+        button { background: var(--primary); color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button:hover { background: #3a56d4; }
+        .result { padding: 1rem; border-radius: 10px; margin: 1rem 0; font-size: 0.95rem; }
+        .success { background: #d4edda; border: 1px solid #28a745; color: #155724; }
+        .danger { background: #f8d7da; border: 1px solid #dc3545; color: #721c24; }
+        .plot { margin-top: 1.5rem; padding: 1rem; background: #f9f9fb; border-radius: 10px; border: 1px dashed var(--border); }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f1f3f8; font-weight: 600; color: var(--dark); }
+        tr:hover { background: #f8f9fa; }
+        .back { text-align: center; margin: 2rem 0; }
+        .back a { color: var(--primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+        .back a:hover { text-decoration: underline; }
+        .loading { display: none; text-align: center; padding: 2rem; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .fault-list { margin-top: 0.5rem; }
+        .fault-list li { margin: 0.3rem 0; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Integrated: Forecast + Klasifikasi Otomatis</h1>
+        </header>
+
+        <div class="content">
+            <div class="card">
+                <h2>Jalankan Forecast & Klasifikasi Sekaligus</h2>
+                <form method="POST" enctype="multipart/form-data" id="main-form">
+                    <div class="form-group">
+                        <label>Upload CSV (Data Terbaru)</label>
+                        <input type="file" name="file" accept=".csv" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Model Forecast</label>
+                        <select name="forecast_model" required>
+                            <option value="">-- Pilih Model --</option>
+                            {% for m in forecast_models %}
+                            <option value="{{ m }}">{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model Klasifikasi</label>
+                        <select name="clf_model" required>
+                            <option value="">-- Pilih Model --</option>
+                            {% for m in clf_models %}
+                            <option value="{{ m }}">{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Jumlah Langkah Forecast</label>
+                        <input type="number" name="steps" value="1" min="1" max="10" required>
+                    </div>
+                    <button type="submit">
+                        Jalankan Integrated
+                    </button>
+                </form>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Sedang memproses forecast dan klasifikasi...</p>
+            </div>
+
+            {% if error %}
+            <div class="result danger">
+                <h3>Error</h3>
+                <p>{{ error }}</p>
+            </div>
+            {% endif %}
+
+            {% if result %}
+            <!-- HASIL FORECAST -->
+            <div class="card">
+                <h3>Hasil Forecast ({{ result.forecast.steps }} Langkah)</h3>
+                <p><strong>Prediksi terakhir ({{ result.forecast.last_step }}) digunakan untuk klasifikasi.</strong></p>
+                <table>
+                    <thead>
+                        <tr><th>Langkah</th>
+                            {% for col in result.forecast.prediction_dict['Step 1'] %}
+                            <th>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for step, values in result.forecast.prediction_dict.items() %}
+                        <tr {% if step == result.forecast.last_step %}style="background: #e3f2fd; font-weight: 600;"{% endif %}>
+                            <td><strong>{{ step }}</strong></td>
+                            {% for col, val in values.items() %}
+                            <td>{{ val }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- GRAFIK -->
+            <div class="plot">
+                <p><em>Visualisasi 50 data terakhir + prediksi (semua parameter)</em></p>
+                {{ result.plot_html | safe }}
+            </div>
+
+            <!-- HASIL KLASIFIKASI -->
+            <!-- HASIL KLASIFIKASI PER LANGKAH -->
+            <div class="card">
+                <h3>Klasifikasi Otomatis per Langkah Prediksi</h3>
+                {% for step_key, clf in result.classification_per_step.items() %}
+                <details style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                    <summary style="font-weight: 600; cursor: pointer; color: #4361ee;">
+                        {{ step_key }} → 
+                        {% if clf.definitions %}
+                            <span style="color: #e74c3c; font-weight: bold;">ADA FAULT</span>
+                        {% else %}
+                            <span style="color: #27ae60;">NORMAL</span>
+                        {% endif %}
+                    </summary>
+
+                    <div style="margin-top: 0.8rem; padding-left: 1rem;">
+                        {% if clf.definitions %}
+                        <div class="result danger" style="margin: 0.5rem 0;">
+                            <ul class="fault-list">
+                                {% for fault, desc in clf.definitions.items() %}
+                                <li><strong>{{ fault }}</strong>: {{ desc }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <div class="result success" style="margin: 0.5rem 0;">
+                            <p><strong>Sistem normal</strong> pada langkah ini.</p>
+                        </div>
+                        {% endif %}
+
+                        <details style="margin-top: 0.5rem; font-size: 0.9rem;">
+                            <summary>Detail Probabilitas</summary>
+                            <table style="font-size: 0.85rem;">
+                                <tr><th>Fault</th><th>Probabilitas</th></tr>
+                                {% for fault, prob in clf.probabilities.items() %}
+                                <tr>
+                                    <td><code>{{ fault }}</code></td>
+                                    <td>{{ "%.1f"|format(prob * 100) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </details>
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="back">
+                <a href="{{ url_for('dashboard') }}">
+                    Kembali ke Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        feather.replace();
+        document.getElementById('main-form').onsubmit = () => {
+            document.getElementById('loading').style.display = 'block';
+            document.querySelector('button[type="submit"]').disabled = true;
+        };
+    </script>
+</body>
+</html>
