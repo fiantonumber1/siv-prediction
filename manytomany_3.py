@@ -296,34 +296,134 @@ print(f"Threshold MSE: {threshold:.6f}")
 print(f"Anomali terdeteksi: {anomalies.sum()} dari {len(anomalies)} menit")
 
 # =============================
-# 15. VISUALISASI
+# 15. VISUALISASI: 3 PLOT TERPISAH – GAMBAR 3 = 3 INPUT + 1 OUTPUT
 # =============================
-plot_cols = target_columns[:3]
-timestamps = df_combined['ts_date'].values[:target_len]
+print("\nMEMBUAT 3 VISUALISASI TERPISAH (Y: 30–39, Gambar 3: 3 Input + 1 Output)...")
 
-plt.figure(figsize=(20, 14))
+# ---- Pilih 1 kolom yang akan di-plot ----
+SELECTED_COL = 'SIV_T_HS_InConv_1'               # <--- GANTI JIKA INGIN KOLOM LAIN
+col_idx = target_columns.index(SELECTED_COL)
 
-for i, col in enumerate(plot_cols):
-    plt.subplot(4, 1, i+1)
-    plt.plot(timestamps, y_true_full[:, i], label=f'Actual {col}', linewidth=1)
-    plt.plot(timestamps, y_pred_full[:, i], '--', label=f'Prediksi {col}', alpha=0.8)
-    plt.title(f'{col}')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
+# ---- Pastikan data cukup untuk 4 hari (1 hari = 144 menit) ----
+MINUTES_PER_DAY = 144
+total_minutes   = len(df_combined)
 
-plt.subplot(4, 1, 4)
-plt.plot(timestamps, mse_per_minute, label='MSE per menit', color='gray')
-plt.axhline(threshold, color='red', linestyle='--', label=f'Threshold ({threshold:.6f})')
-plt.fill_between(timestamps, 0, mse_per_minute, where=anomalies, color='red', alpha=0.3, label='Anomali')
-plt.title('Deteksi Anomali (MSE > 95th Percentile)')
-plt.xlabel('Waktu')
-plt.ylabel('MSE')
-plt.legend()
-plt.grid(True, alpha=0.3)
+if total_minutes < 4 * MINUTES_PER_DAY:
+    print(f"  WARNING: Data < 4 hari ({total_minutes} menit) → skala ulang.")
+    MINUTES_PER_DAY = total_minutes // 4
 
-plt.suptitle('SEQ2SEQ + ANOMALY DETECTION: 3 HARI → 1 HARI', fontsize=16)
-plt.tight_layout()
+n_minutes = min(4 * MINUTES_PER_DAY, total_minutes)
+
+# Potong data
+ts_full   = df_combined['ts_date'].values[:n_minutes]
+true_full = y_true_full[:n_minutes, col_idx]
+pred_full = y_pred_full[:n_minutes, col_idx]
+
+# Bagi menjadi 4 hari
+days = []
+for d in range(4):
+    s = d * MINUTES_PER_DAY
+    e = min(s + MINUTES_PER_DAY, n_minutes)
+    days.append({
+        'time': ts_full[s:e],
+        'true': true_full[s:e],
+        'pred': pred_full[s:e] if d == 3 else None
+    })
+
+# ---- Fungsi bantu: atur X-axis & Y-axis tetap 30–39 ----
+def setup_axes(ax):
+    day_boundaries = [days[d]['time'][0] for d in range(4)]
+    day_labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4']
+    ax.set_xticks(day_boundaries)
+    ax.set_xticklabels(day_labels, fontsize=12, fontweight='bold')
+    ax.set_xlabel('Hari', fontsize=13)
+    ax.tick_params(axis='x', length=0)
+    ax.set_ylim(30, 39)
+    ax.set_yticks(np.arange(30, 40, 1))
+    ax.set_ylabel('Nilai', fontsize=12)
+    ax.grid(True, alpha=0.3)
+
+# ---- Fungsi plot 3-hari-input + 1-hari-output ----
+def plot_input_output(ax, output_series, output_label, color):
+    for d in range(3):
+        ax.plot(days[d]['time'], days[d]['true'],
+                label=f'Day {d+1} Input' if d == 0 else "",
+                linewidth=1.2, color='tab:blue')
+    ax.plot(days[3]['time'], output_series,
+            label=output_label, color=color, linewidth=2.5)
+    ax.set_title(SELECTED_COL, fontsize=14)
+    ax.legend(fontsize=11)
+    setup_axes(ax)
+
+# =============================
+# GAMBAR 1 – 3 INPUT → DAY-4 REAL
+# =============================
+fig1, ax1 = plt.subplots(figsize=(16, 6))
+plot_input_output(ax1, days[3]['true'], 'Day 4 Real', 'red')
+plt.suptitle('GAMBAR 1: 3 Hari Input → Hari ke-4 (Data Real)', fontsize=16, y=0.98)
+plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show()
+
+# =============================
+# GAMBAR 2 – 3 INPUT → DAY-4 PREDIKSI
+# =============================
+fig2, ax2 = plt.subplots(figsize=(16, 6))
+plot_input_output(ax2, days[3]['pred'], 'Day 4 Prediksi', 'green')
+plt.suptitle('GAMBAR 2: 3 Hari Input → Hari ke-4 (Prediksi Model)', fontsize=16, y=0.98)
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.show()
+
+# =============================
+# GAMBAR 3 – 3 INPUT + DAY-4 REAL vs PREDIKSI + ANOMALI
+# =============================
+mse_day4 = (days[3]['true'] - days[3]['pred']) ** 2
+threshold_day4 = np.percentile(mse_per_minute, 95)
+anomalies_day4 = mse_day4 > threshold_day4
+
+fig3, (ax3a, ax3b) = plt.subplots(2, 1, figsize=(16, 10), gridspec_kw={'height_ratios': [2, 1]})
+
+# --- Subplot 1: 3 Hari Input + Day 4 Real vs Prediksi (Y: 30–39) ---
+for d in range(3):
+    ax3a.plot(days[d]['time'], days[d]['true'],
+              label=f'Day {d+1} Input' if d == 0 else "",
+              linewidth=1.2, color='tab:blue')
+
+ax3a.plot(days[3]['time'], days[3]['true'],  label='Day 4 Real', linewidth=2.0, color='tab:blue')
+ax3a.plot(days[3]['time'], days[3]['pred'], '--', label='Day 4 Prediksi', linewidth=2.0, color='tab:orange')
+
+# Highlight anomali hanya di Day 4
+ax3a.fill_between(days[3]['time'],
+                  days[3]['true'], days[3]['pred'],
+                  where=anomalies_day4, color='red', alpha=0.3, label='Anomali')
+
+ax3a.set_title(f'{SELECTED_COL} – 3 Hari Input + Hari ke-4', fontsize=14)
+ax3a.legend(fontsize=11)
+setup_axes(ax3a)
+
+# --- Subplot 2: MSE + Anomali (Hanya Day 4) ---
+ax3b.plot(days[3]['time'], mse_day4, label='MSE per menit', color='purple', linewidth=1.5)
+ax3b.axhline(threshold_day4, color='red', linestyle='--',
+             label=f'Threshold 95% ({threshold_day4:.6f})')
+ax3b.fill_between(days[3]['time'], 0, mse_day4,
+                  where=anomalies_day4, color='red', alpha=0.4, label='Anomali')
+ax3b.set_title('Deteksi Anomali pada Hari ke-4', fontsize=14)
+ax3b.set_ylabel('MSE', fontsize=12)
+ax3b.legend(fontsize=11)
+
+# X-axis untuk MSE: tetap Day 1–4, tapi hanya plot Day 4
+day_boundaries = [days[d]['time'][0] for d in range(4)]
+ax3b.set_xticks(day_boundaries)
+ax3b.set_xticklabels(['Day 1', 'Day 2', 'Day 3', 'Day 4'], fontsize=12, fontweight='bold')
+ax3b.set_xlabel('Hari', fontsize=13)
+ax3b.tick_params(axis='x', length=0)
+ax3b.grid(True, alpha=0.3)
+
+plt.suptitle('GAMBAR 3: 3 Hari Input + Hari ke-4 (Real vs Prediksi + Anomali)', fontsize=16, y=0.98)
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.show()
+
+print(f"  3 gambar selesai (parameter: {SELECTED_COL}, Y: 30–39)")
+print(f"  Anomali di Day-4: {anomalies_day4.sum()} menit dari {len(anomalies_day4)}")
 
 # =============================
 # 16. SIMPAN
