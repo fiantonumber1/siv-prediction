@@ -7,7 +7,7 @@
 # =============================
 
 # Terbaru
-# Sampling 1/1000
+# Sampling 1/100
 
 
 import pandas as pd
