@@ -6,6 +6,10 @@
 # RAM < 1 GB | Generator | Robust | No NaN
 # =============================
 
+# Terbaru
+# Sampling 1/1000
+
+
 import pandas as pd
 import numpy as np
 import os
