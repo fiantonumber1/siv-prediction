@@ -18,14 +18,19 @@ import joblib
 
 warnings.filterwarnings('ignore')
 
-# =============================
-# CONFIG DUPLIKASI IDENTIK
-# =============================
-N_DUPLICATES = 9                    # <--- UBAH DI SINI (minimal 4)
+
+# ==================================================================
+# TOMBOL UTAMA — GANTI DI SINI SAJA!
+# ==================================================================
+USE_REAL_DATA_MODE = False   # True  → pakai scaler normal (0-1) untuk data asli
+                             # False → pakai scaler dengan bantalan (-0.2 to 1.2) untuk testing identik
+N_DUPLICATES = 9             # Jumlah hari identik (minimal 4)
+# ==================================================================
+
 folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 
 # =============================
-# 1. AMBIL 1 CSV → DUPLIKASI 20 HARI IDENTIK
+# 1. BACA FILE CSV
 # =============================
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
 csv_files = [f for f in csv_files 
@@ -37,10 +42,10 @@ if len(csv_files) == 0:
     raise FileNotFoundError("Tidak ada CSV ditemukan!")
 
 template_file = csv_files[0]
-print(f"Template (1 file saja): {os.path.basename(template_file)} → akan diduplikasi {N_DUPLICATES}x")
+print(f"Template: {os.path.basename(template_file)} → duplikasi {N_DUPLICATES}x")
 
 # =============================
-# 2. Target Kolom (sama persis)
+# 2. TARGET KOLOM
 # =============================
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
@@ -61,7 +66,7 @@ COMPRESSION_FACTOR = 100
 COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR  # 1500
 
 # =============================
-# 4. BACA + CROP TEMPLATE
+# 4. FUNGSI BACA + CROP
 # =============================
 def read_and_crop(filepath):
     df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
@@ -78,7 +83,7 @@ def read_and_crop(filepath):
 
     file_date = df['ts_date'].dt.date.iloc[0]
     start_dt = datetime.combine(file_date, START_TIME)
-    end_dt = datetime.combine(file_date, END_TIME)
+    end_dt   = datetime.combine(file_date, END_TIME)
     df = df[(df['ts_date'] >= start_dt) & (df['ts_date'] <= end_dt)]
     df = df.iloc[N_DROP_FIRST:N_DROP_FIRST + N_TAKE].reset_index(drop=True)
     return df[['ts_date'] + target_columns]
@@ -95,7 +100,7 @@ for i in range(COMPRESSED_POINTS_PER_DAY):
 template_compressed = pd.DataFrame(chunks, columns=target_columns)
 template_compressed.insert(0, 'ts_date', ts_mid)
 
-# Duplikasi 20 hari identik + geser tanggal
+# Duplikasi identik
 compressed_dfs = []
 valid_files = []
 for day_idx in range(N_DUPLICATES):
@@ -105,10 +110,10 @@ for day_idx in range(N_DUPLICATES):
     compressed_dfs.append(df_day)
     valid_files.append(f"Identik_Day_{day_idx+1:02d}")
 
-print(f"Berhasil buat {N_DUPLICATES} hari 100% identik")
+print(f"Berhasil buat {N_DUPLICATES} hari identik")
 
 # =============================
-# 7. FUNGSI LABELING (SAMA PERSIS)
+# 7-8. LABELING (sama)
 # =============================
 def label_health_status(df_day: pd.DataFrame) -> tuple:
     energy = df_day['SIV_Output_Energy']
@@ -124,9 +129,6 @@ def label_health_status(df_day: pd.DataFrame) -> tuple:
     else:
         return 2, f"{failures} failures"
 
-# =============================
-# 8. LABEL SEMUA HARI
-# =============================
 print("\nLABEL HEALTH STATUS:")
 health_status = []
 status_reasons = []
@@ -141,7 +143,7 @@ status_df = pd.DataFrame({'day': [f"Day {i+1}" for i in range(N_DUPLICATES)],
 status_df.to_csv("health_status_per_day.csv", index=False)
 
 # =============================
-# 9. DATA MULTI-TASK (3→1)
+# 9. SIAPKAN DATA MULTI-TASK
 # =============================
 WINDOW = 3 * COMPRESSED_POINTS_PER_DAY
 FUTURE = COMPRESSED_POINTS_PER_DAY
@@ -157,12 +159,21 @@ X_seq = np.array(X_seq, dtype='float32')
 y_signal = np.array(y_signal, dtype='float32')
 y_status = np.array(y_status)
 
-scaler = MinMaxScaler()
+# =============================
+# SCALER OTOMATIS BERDASARKAN MODE
+# =============================
+if USE_REAL_DATA_MODE:
+    print("MODE: DATA ASLI → scaler normal (0-1)")
+    scaler = MinMaxScaler(feature_range=(0, 1))
+else:
+    print("MODE: DATA IDENTIK → scaler dengan bantalan (-0.2 sampai 1.2)")
+    scaler = MinMaxScaler(feature_range=(-0.2, 1.2))
+
 X_scaled = scaler.fit_transform(X_seq.reshape(-1, n_features)).reshape(X_seq.shape)
 y_signal_scaled = scaler.transform(y_signal.reshape(-1, n_features)).reshape(y_signal.shape)
 
 # =============================
-# 10. MODEL (SAMA PERSIS)
+# 10. MODEL & TRAINING
 # =============================
 input_seq = Input(shape=(WINDOW, n_features))
 encoded = LSTM(128)(input_seq)
@@ -179,8 +190,10 @@ model.compile(optimizer=Adam(0.001),
               loss_weights={'signal': 1.0, 'status': 3.0},
               metrics={'status': 'accuracy'})
 
-print("\nTraining (data identik → harus cepat konvergen)...")
+print("\nTraining model...")
 history = model.fit(X_scaled, [y_signal_scaled, y_status], epochs=100, batch_size=1, verbose=1)
+
+# =============================
 
 # =============================
 # 11. PREDIKSI HARI TERAKHIR
