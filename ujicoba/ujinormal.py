@@ -1,7 +1,6 @@
 # =============================
 # FULL CODE: MULTI-TASK SEQ2SEQ + PLUGGABLE LABELING
-# VERSI TESTING DATA IDENTIK (1 CSV → AUTO DUPLIKASI 20 HARI)
-# 0 = Sehat, 1 = Pre-Anomali, 2 = Near-Fail
+# VERSI IDENTIK 20 HARI → TETAPI OUTPUT 100% SAMA DENGAN CODE ASLI
 # =============================
 
 import pandas as pd
@@ -20,15 +19,14 @@ import joblib
 warnings.filterwarnings('ignore')
 
 # =============================
-# CONFIG URUTAN HARI IDENTIK
+# CONFIG DUPLIKASI IDENTIK
 # =============================
-N_DUPLICATES = 20                    # <--- UBAH DI SINI KALAU MAU LEBIH/BANYAK
-START_DATE = datetime(2025, 1, 1)     # Tanggal awal arbitrary untuk plot
+N_DUPLICATES = 9                    # <--- UBAH DI SINI (minimal 4)
+folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 
 # =============================
-# 1. CARI 1 CSV SAJA → JADI TEMPLATE
+# 1. AMBIL 1 CSV → DUPLIKASI 20 HARI IDENTIK
 # =============================
-folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
 csv_files = [f for f in csv_files 
              if len(os.path.basename(f)) >= 12 
@@ -36,13 +34,13 @@ csv_files = [f for f in csv_files
              and "hasil" not in os.path.basename(f).lower()]
 
 if len(csv_files) == 0:
-    raise FileNotFoundError("Tidak ada file CSV ditemukan di folder ini!")
+    raise FileNotFoundError("Tidak ada CSV ditemukan!")
 
 template_file = csv_files[0]
-print(f"Template yang digunakan: {os.path.basename(template_file)}")
+print(f"Template (1 file saja): {os.path.basename(template_file)} → akan diduplikasi {N_DUPLICATES}x")
 
 # =============================
-# 2. Target Kolom
+# 2. Target Kolom (sama persis)
 # =============================
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
@@ -63,25 +61,14 @@ COMPRESSION_FACTOR = 100
 COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR  # 1500
 
 # =============================
-# 4. FUNGSI BACA + CROP + CLEAN
+# 4. BACA + CROP TEMPLATE
 # =============================
 def read_and_crop(filepath):
-    print(f"\nMembaca template: {os.path.basename(filepath)}")
-    try:
-        df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
-    except Exception as e:
-        raise ValueError(f"Gagal baca file: {e}")
-
+    df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
     df.columns = [col.strip() for col in df.columns]
-    if 'ts_date' not in df.columns:
-        raise ValueError("Kolom 'ts_date' tidak ditemukan!")
-
-    df['ts_date'] = pd.to_datetime(
-        df['ts_date'].astype(str).str.replace(',', '.'),
-        format='%Y-%m-%d %H:%M:%S.%f', errors='coerce'
-    )
-    df = df.dropna(subset=['ts_date']).copy()
-
+    df['ts_date'] = pd.to_datetime(df['ts_date'].astype(str).str.replace(',', '.'), 
+                                   format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+    df = df.dropna(subset=['ts_date'])
     for col in target_columns:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce')
@@ -89,98 +76,72 @@ def read_and_crop(filepath):
             df[col] = np.nan
     df[target_columns] = df[target_columns].ffill().bfill()
 
-    # Filter jam operasional
     file_date = df['ts_date'].dt.date.iloc[0]
     start_dt = datetime.combine(file_date, START_TIME)
     end_dt = datetime.combine(file_date, END_TIME)
-    mask = (df['ts_date'] >= start_dt) & (df['ts_date'] <= end_dt)
-    df = df[mask].copy()
-
-    if len(df) == 0:
-        raise ValueError("Tidak ada data dalam rentang 06:00 - 18:16")
-
+    df = df[(df['ts_date'] >= start_dt) & (df['ts_date'] <= end_dt)]
     df = df.iloc[N_DROP_FIRST:N_DROP_FIRST + N_TAKE].reset_index(drop=True)
-    print(f"  Setelah crop: {len(df):,} baris")
     return df[['ts_date'] + target_columns]
 
-# =============================
-# 5. BACA TEMPLATE → KOMPRESI → DUPLIKASI 20 HARI
-# =============================
 template_raw = read_and_crop(template_file)
 
-# Kompresi 1:100
-print(f"\nKompresi 1:100 → {COMPRESSED_POINTS_PER_DAY:,} titik/hari")
-chunks = []
-ts_mid = []
+# Kompresi template
+chunks, ts_mid = [], []
 for i in range(COMPRESSED_POINTS_PER_DAY):
-    start = i * COMPRESSION_FACTOR
-    end = start + COMPRESSION_FACTOR
-    chunk = template_raw[target_columns].iloc[start:end].mean()
-    chunks.append(chunk)
-    mid_idx = start + COMPRESSION_FACTOR // 2
-    ts_mid.append(template_raw['ts_date'].iloc[mid_idx])
+    s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
+    chunks.append(template_raw[target_columns].iloc[s:e].mean())
+    ts_mid.append(template_raw['ts_date'].iloc[s + COMPRESSION_FACTOR//2])
 
 template_compressed = pd.DataFrame(chunks, columns=target_columns)
 template_compressed.insert(0, 'ts_date', ts_mid)
 
-# Duplikasi jadi 20 hari identik
+# Duplikasi 20 hari identik + geser tanggal
 compressed_dfs = []
 valid_files = []
 for day_idx in range(N_DUPLICATES):
     df_day = template_compressed.copy()
-    
-    # Geser tanggal agar kronologis (hanya untuk plot cantik)
-    day_offset = timedelta(days=day_idx)
-    df_day['ts_date'] = df_day['ts_date'].dt.normalize() + day_offset + (df_day['ts_date'] - df_day['ts_date'].dt.normalize())
-    
+    offset = timedelta(days=day_idx)
+    df_day['ts_date'] = df_day['ts_date'].dt.normalize() + offset + (df_day['ts_date'] - df_day['ts_date'].dt.normalize())
     compressed_dfs.append(df_day)
-    valid_files.append(f"DUPLICATE_Day_{day_idx+1:02d}")
+    valid_files.append(f"Identik_Day_{day_idx+1:02d}")
 
-print(f"\nBerhasil membuat {N_DUPLICATES} hari DATA 100% IDENTIK")
-print(f"Shape per hari: {compressed_dfs[0].shape}")
+print(f"Berhasil buat {N_DUPLICATES} hari 100% identik")
 
 # =============================
-# 6. FUNGSI LABELING (BISA DIGANTI DI SINI SAJA!)
+# 7. FUNGSI LABELING (SAMA PERSIS)
 # =============================
 def label_health_status(df_day: pd.DataFrame) -> tuple:
     energy = df_day['SIV_Output_Energy']
     max_energy = energy.max()
     if max_energy == 0:
         return 0, "No energy data"
-    
     drop = energy.diff()
     failures = ((drop < -0.5 * max_energy) & (drop < 0)).sum()
-    
     if failures == 0:
-        return 0, "Sehat - Tidak ada kegagalan"
+        return 0, "No failure"
     elif failures == 1:
-        return 1, "Pre-Anomali - 1 penurunan besar"
+        return 1, "1 failure"
     else:
-        return 2, f"Near-Fail - {failures} kegagalan"
+        return 2, f"{failures} failures"
 
 # =============================
-# 7. LABEL SEMUA HARI (HARUSNYA SAMA KARENA IDENTIK)
+# 8. LABEL SEMUA HARI
 # =============================
-print("\nLABEL HEALTH STATUS (semua hari identik):")
+print("\nLABEL HEALTH STATUS:")
 health_status = []
 status_reasons = []
 for i, df_day in enumerate(compressed_dfs):
     status, reason = label_health_status(df_day)
     health_status.append(status)
     status_reasons.append(reason)
-    print(f"  Day {i+1:02d}: {status} → {reason}")
+    print(f"  Day {i+1}: {status} ({reason})")
 
-# Simpan label
-status_df = pd.DataFrame({
-    'day': [f"Day {i+1}" for i in range(N_DUPLICATES)],
-    'file': valid_files,
-    'health_status': health_status,
-    'reason': status_reasons
-})
+status_df = pd.DataFrame({'day': [f"Day {i+1}" for i in range(N_DUPLICATES)],
+                          'file': valid_files, 'health_status': health_status, 'reason': status_reasons})
 status_df.to_csv("health_status_per_day.csv", index=False)
 
 # =============================
-# 8. SIAPKAN DATA MULTI-TASK (3→1 Sliding Window)
+# 9. DATA MULTI-TASK (3→1)
 # =============================
 WINDOW = 3 * COMPRESSED_POINTS_PER_DAY
 FUTURE = COMPRESSED_POINTS_PER_DAY
@@ -188,8 +149,7 @@ n_features = len(target_columns)
 
 X_seq, y_signal, y_status = [], [], []
 for i in range(len(compressed_dfs) - 3):
-    input_days = compressed_dfs[i:i+3]
-    X_seq.append(np.concatenate([df[target_columns].values for df in input_days], axis=0))
+    X_seq.append(np.concatenate([df[target_columns].values for df in compressed_dfs[i:i+3]], axis=0))
     y_signal.append(compressed_dfs[i+3][target_columns].values)
     y_status.append(health_status[i+3])
 
@@ -197,49 +157,33 @@ X_seq = np.array(X_seq, dtype='float32')
 y_signal = np.array(y_signal, dtype='float32')
 y_status = np.array(y_status)
 
-# Normalisasi global
 scaler = MinMaxScaler()
-X_flat = X_seq.reshape(-1, n_features)
-X_scaled = scaler.fit_transform(X_flat).reshape(X_seq.shape)
-y_signal_flat = y_signal.reshape(-1, n_features)
-y_signal_scaled = scaler.transform(y_signal_flat).reshape(y_signal.shape)
+X_scaled = scaler.fit_transform(X_seq.reshape(-1, n_features)).reshape(X_seq.shape)
+y_signal_scaled = scaler.transform(y_signal.reshape(-1, n_features)).reshape(y_signal.shape)
 
 # =============================
-# 9. MODEL MULTI-TASK SEQ2SEQ + CLASSIFICATION
+# 10. MODEL (SAMA PERSIS)
 # =============================
 input_seq = Input(shape=(WINDOW, n_features))
 encoded = LSTM(128)(input_seq)
 encoded = Dropout(0.2)(encoded)
-
-# Decoder - Forecasting
 decoded = RepeatVector(FUTURE)(encoded)
 decoded = LSTM(64, return_sequences=True)(decoded)
 output_signal = TimeDistributed(Dense(n_features), name='signal')(decoded)
-
-# Classifier - Health Status
 status_hidden = Dense(32, activation='relu')(encoded)
 output_status = Dense(3, activation='softmax', name='status')(status_hidden)
 
 model = Model(inputs=input_seq, outputs=[output_signal, output_status])
-model.compile(
-    optimizer=Adam(learning_rate=0.001),
-    loss={'signal': 'mse', 'status': 'sparse_categorical_crossentropy'},
-    loss_weights={'signal': 1.0, 'status': 3.0},
-    metrics={'status': 'accuracy'}
-)
-print(model.summary())
+model.compile(optimizer=Adam(0.001),
+              loss={'signal': 'mse', 'status': 'sparse_categorical_crossentropy'},
+              loss_weights={'signal': 1.0, 'status': 3.0},
+              metrics={'status': 'accuracy'})
 
-# Training
-print("\nTraining model dengan data identik...")
-history = model.fit(
-    X_scaled, [y_signal_scaled, y_status],
-    epochs=100,
-    batch_size=1,
-    verbose=1
-)
+print("\nTraining (data identik → harus cepat konvergen)...")
+history = model.fit(X_scaled, [y_signal_scaled, y_status], epochs=100, batch_size=1, verbose=1)
 
 # =============================
-# 10. PREDIKSI HARI TERAKHIR
+# 11. PREDIKSI HARI TERAKHIR
 # =============================
 last_input = X_scaled[-1:].reshape(1, WINDOW, n_features)
 pred_signal_scaled, pred_status_prob = model.predict(last_input, verbose=0)
@@ -248,45 +192,158 @@ pred_status = np.argmax(pred_status_prob, axis=1)[0]
 pred_confidence = np.max(pred_status_prob) * 100
 
 status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
-print(f"\nPREDIKSI HARI KE-{N_DUPLICATES}: {status_map[pred_status]} ({pred_confidence:.2f}% confidence)")
+print(f"\nPREDIKSI HARI TERAKHIR: {status_map[pred_status]} ({pred_confidence:.1f}% confidence)")
 
 # =============================
-# 11. SIMPAN MODEL & SCALER
+# 12. PLOT SEMUA PARAMETER + STATUS (SAMA PERSIS CODE 1)
 # =============================
-model.save("multitask_seq2seq_identical_data.h5")
-joblib.dump(scaler, "scaler_identical_data.pkl")
+df_final = pd.concat(compressed_dfs, ignore_index=True)
+data_norm = df_final[target_columns].copy()
+for col in target_columns:
+    mn, mx = data_norm[col].min(), data_norm[col].max()
+    data_norm[col] = 0 if mx - mn < 1e-8 else (data_norm[col] - mn) / (mx - mn)
+
+x_index = np.arange(len(df_final))
+fig, ax = plt.subplots(figsize=(20, 8))
+for col in target_columns:
+    ax.plot(x_index, data_norm[col], linewidth=0.9, alpha=0.7)
+
+n_days = len(compressed_dfs)
+day_boundaries = np.arange(0, (n_days + 1) * COMPRESSED_POINTS_PER_DAY, COMPRESSED_POINTS_PER_DAY)
+mid_points = [(day_boundaries[i] + day_boundaries[i+1]) // 2 for i in range(n_days)]
+
+for pos in day_boundaries[1:-1]:
+    ax.axvline(x=pos, color='red', linestyle='--', linewidth=1.5, alpha=0.9)
+for i, mid in enumerate(mid_points):
+    ax.text(mid, 1.05, f'Day {i+1}', ha='center', va='bottom', fontsize=12, fontweight='bold', color='red',
+            transform=ax.get_xaxis_transform())
+    color = ['green', 'orange', 'red'][health_status[i]]
+    ax.text(mid, 1.15, status_map[health_status[i]], ha='center', va='bottom', fontsize=10, fontweight='bold', color=color,
+            transform=ax.get_xaxis_transform())
+
+ax.set_xlim(0, len(df_final))
+ax.set_title(f"Semua Parameter + Health Status - {n_days} Hari (DATA IDENTIK)", fontsize=14)
+ax.set_xlabel("Hari")
+ax.set_ylabel("Nilai Normalisasi [0-1]")
+ax.grid(True, alpha=0.3)
+ax.legend(target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+plt.tight_layout()
+plt.savefig("plot_all_parameters_with_status.png", dpi=300, bbox_inches='tight')
+plt.close()
 
 # =============================
-# 12. HASIL PREDIKSI VS REAL (HARI TERAKHIR)
+# 13. VISUALISASI: 3 PLOT (PAKAI SCALER UTAMA!)
 # =============================
-y_true_day_last = compressed_dfs[-1][target_columns].values.astype('float32')
-mse_per_feature = np.mean((pred_signal - y_true_day_last) ** 2, axis=0)
-mse_total = np.mean(mse_per_feature)
+if len(compressed_dfs) < 4:
+    print("ERROR: Data kurang dari 4 hari! Visualisasi 4 hari terakhir dibatalkan.")
+else:
+    all_dfs_4 = compressed_dfs[-4:]
+    n_days_plot = len(all_dfs_4)
+    df_plot = pd.concat(all_dfs_4, ignore_index=True)
+    X_full = df_plot[target_columns].values.astype('float32')
+    y_pred_day4 = pred_signal
+    y_true_day4 = compressed_dfs[-1][target_columns].values.astype('float32')
 
-print(f"\nMSE Forecasting Hari Terakhir: {mse_total:.2e} (harusnya sangat kecil karena data identik!)")
+    x_full = np.arange(n_days_plot * COMPRESSED_POINTS_PER_DAY)
+    
+    # PERBAIKAN: Gunakan scaler UTAMA (yang sama dengan training)
+    X_flat = X_full.reshape(-1, n_features)
+    X_norm = scaler.transform(X_flat).reshape(X_full.shape)  # PAKAI .transform(), bukan fit!
 
-# Simpan hasil prediksi
-result_df = pd.DataFrame({
-    'ts_date': compressed_dfs[-1]['ts_date'].values,
-    'health_status_true': [health_status[-1]] * FUTURE,
-    'health_status_pred': [pred_status] * FUTURE,
-    'confidence_%': [pred_confidence] * FUTURE
-})
+    y_pred_flat = y_pred_day4.reshape(-1, n_features)
+    y_pred_norm = scaler.transform(y_pred_flat).reshape(y_pred_day4.shape)  # Sama!
+
+    # day boundaries
+    day_boundaries = np.arange(0, (n_days_plot + 1) * COMPRESSED_POINTS_PER_DAY, COMPRESSED_POINTS_PER_DAY)
+    mid_points = [(day_boundaries[i] + day_boundaries[i+1]) // 2 for i in range(n_days_plot)]
+
+    def setup_plot(ax, title):
+        for pos in day_boundaries:
+            if 0 < pos < len(x_full):
+                ax.axvline(x=pos, color='red', linestyle='--', linewidth=1.5, alpha=0.9)
+        for i, mid in enumerate(mid_points):
+            day_idx = len(compressed_dfs) - n_days_plot + i
+            ax.text(mid, 1.05, f'Day {day_idx+1}', ha='center', va='bottom',
+                    fontsize=12, fontweight='bold', color='red',
+                    transform=ax.get_xaxis_transform())
+            status_text = status_map[health_status[day_idx]]
+            color = ['green', 'orange', 'red'][health_status[day_idx]]
+            ax.text(mid, 1.15, status_text, ha='center', va='bottom',
+                    fontsize=10, fontweight='bold', color=color,
+                    transform=ax.get_xaxis_transform())
+        ax.set_xticks(mid_points)
+        ax.set_xticklabels([f'Day {len(compressed_dfs)-n_days_plot+1+i}' for i in range(n_days_plot)])
+        ax.set_xlim(0, len(x_full))
+        ax.set_ylim(-0.05, 1.2)  # Batasi Y agar konsisten
+        ax.set_title(title, fontsize=14)
+        ax.set_xlabel("Hari (1.500 titik per hari)", fontsize=12)
+        ax.set_ylabel("Nilai Normalisasi [0-1]")
+        ax.grid(True, alpha=0.3)
+
+    # --- GAMBAR 1 ---
+    fig1, ax1 = plt.subplots(figsize=(20, 8))
+    for i, col in enumerate(target_columns):
+        ax1.plot(x_full, X_norm[:, i], label=col, linewidth=0.9, alpha=0.7)
+    setup_plot(ax1, f'GAMBAR 1: 4 Hari Real + Health Status')
+    ax1.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+    plt.tight_layout()
+    plt.savefig("gambar1_4hari_real_with_status.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # --- GAMBAR 2 ---
+    fig2, ax2 = plt.subplots(figsize=(20, 8))
+    handles2 = []
+    for i, col in enumerate(target_columns):
+        line = ax2.plot(x_full[:3*COMPRESSED_POINTS_PER_DAY], X_norm[:3*COMPRESSED_POINTS_PER_DAY, i],
+                        label=col, linewidth=0.9, alpha=0.7)[0]
+        handles2.append(line)
+    for i, col in enumerate(target_columns):
+        ax2.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], y_pred_norm[:, i],
+                 '--', linewidth=1.8, alpha=0.9)
+    setup_plot(ax2, f'GAMBAR 2: 3 Hari Input + 1 Hari Prediksi + Status')
+    ax2.legend(handles2, target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+    plt.tight_layout()
+    plt.savefig("gambar2_input_plus_prediksi_with_status.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # --- GAMBAR 3 ---
+    fig3, ax3 = plt.subplots(figsize=(20, 8))
+    handles3 = []
+    for i, col in enumerate(target_columns):
+        line = ax3.plot(x_full[:3*COMPRESSED_POINTS_PER_DAY], X_norm[:3*COMPRESSED_POINTS_PER_DAY, i],
+                        label=col, linewidth=0.9, alpha=0.7)[0]
+        handles3.append(line)
+    for i, col in enumerate(target_columns):
+        ax3.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], X_norm[3*COMPRESSED_POINTS_PER_DAY:, i],
+                 linewidth=1.2, alpha=0.8, label=f'Real {col}' if i == 0 else None)
+        ax3.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], y_pred_norm[:, i],
+                 '--', linewidth=1.8, alpha=0.9, label=f'Pred {col}' if i == 0 else None)
+    setup_plot(ax3, f'GAMBAR 3: Day 4 → Real vs Prediksi + Status')
+    ax3.legend(handles3, target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+    plt.tight_layout()
+    plt.savefig("gambar3_real_vs_prediksi_with_status.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+# =============================
+# 14. SIMPAN SEMUA (NAMA FILE SAMA DENGAN CODE 1)
+# =============================
+model.save("multitask_seq2seq_classification.h5")
+joblib.dump(scaler, "scaler_multitask.pkl")
+
+result_df = pd.DataFrame({'ts_date': compressed_dfs[-1]['ts_date'].values})
 for i, col in enumerate(target_columns):
-    result_df[f'actual_{col}'] = y_true_day_last[:, i]
+    result_df[f'actual_{col}'] = y_true_day4[:, i]
     result_df[f'pred_{col}'] = pred_signal[:, i]
-    result_df[f'error_{col}'] = pred_signal[:, i] - y_true_day_last[:, i]
+result_df['health_status_pred'] = pred_status
+result_df['confidence_%'] = pred_confidence
+result_df.to_csv("hasil_prediksi_dan_status.csv", index=False)
 
-result_df.to_csv("hasil_prediksi_identical_data.csv", index=False)
-print("\nSEMUA FILE TELAH DISIMPAN:")
+print("\nSELESAI! File output 100% sama dengan versi asli:")
 print("   → health_status_per_day.csv")
-print("   → multitask_seq2seq_identical_data.h5")
-print("   → scaler_identical_data.pkl")
-print("   → hasil_prediksi_identical_data.csv")
-print(f"   → Prediksi Status: {status_map[pred_status]} ({pred_confidence:.2f}%)")
-print(f"   → MSE Forecasting: {mse_total:.2e}")
-
-# =============================
-# SELESAI! 
-# Model harusnya prediksi hampir SEMPURNA karena data identik
-# =============================
+print("   → plot_all_parameters_with_status.png")
+print("   → gambar1_4hari_real_with_status.png")
+print("   → gambar2_input_plus_prediksi_with_status.png")
+print("   → gambar3_real_vs_prediksi_with_status.png")
+print("   → multitask_seq2seq_classification.h5")
+print("   → scaler_multitask.pkl")
+print("   → hasil_prediksi_dan_status.csv")
