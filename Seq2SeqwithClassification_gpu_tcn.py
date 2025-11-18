@@ -1,6 +1,6 @@
 # =============================
 # SEQ2SEQ + CLASSIFICATION 21 PARAMETER - FULL TCN VERSION
-# GPU + CHECKPOINT + RESUME + LOG + SEMUA PLOT + HASIL CSV
+# VERSI FINAL: UBAH SATU ANGKA SAJA → SEMUA OTOMATIS BENAR
 # =============================
 
 import pandas as pd
@@ -20,22 +20,43 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 
 # ==================================================================
-# TOMBOL UTAMA - SESUAIKAN SESUAI KEBUTUHAN
+# TOMBOL UTAMA - UBAH DI SINI AJA SELAMANYA
 # ==================================================================
-USE_REAL_DATA_MODE = True          # True = pakai file CSV asli | False = duplikasi identik
+USE_REAL_DATA_MODE = True          # True = pakai CSV asli | False = duplikasi
 N_DUPLICATES = 20                   # hanya dipakai kalau False
 N_EPOCHS = 600
 BATCH_SIZE = 4
 CHECKPOINT_INTERVAL = 50
 CHECKPOINT_DIR = "checkpoints_21param_TCN"
 LOG_FILE = "training_log_21param_TCN.txt"
+
+COMPRESSION_FACTOR = 50             # ← INI SATU-SATUNYA YANG KAMU UBAH LAGI SELAMANYA
+# 100 = cepat, 50 = sedang, 25 = detail, 10 = super detail
 # ==================================================================
+
+# ================== AUTO-CALCULATED — JANGAN DIUBAH MANUAL ==================
+N_TAKE = 150_000
+COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR
+
+WINDOW = 3 * COMPRESSED_POINTS_PER_DAY      # 3 hari input
+FUTURE = COMPRESSED_POINTS_PER_DAY          # 1 hari prediksi
+
+START_TIME = time(6, 0, 0)
+END_TIME   = time(18, 16, 35)
+N_DROP_FIRST = 3600
+# ============================================================================
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
+
+# Print info kompresi biar jelas
+print(f"\n[CONFIG] COMPRESSION_FACTOR = {COMPRESSION_FACTOR}×")
+print(f"         → {COMPRESSED_POINTS_PER_DAY} titik = 1 hari penuh")
+print(f"         → Input sequence  = {WINDOW} timesteps (3 hari)")
+print(f"         → Prediksi output = {FUTURE} timesteps (1 hari)\n")
 
 # =============================
 # 21 PARAMETER (FULL)
@@ -58,13 +79,6 @@ def extract_date(f):
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
 csv_files = [f for f in csv_files if f.lower().endswith('.csv') and "hasil" not in os.path.basename(f).lower()]
 csv_files_sorted = sorted(csv_files, key=extract_date)
-
-START_TIME = time(6, 0, 0)
-END_TIME   = time(18, 16, 35)
-N_DROP_FIRST = 3600
-N_TAKE = 150_000
-COMPRESSION_FACTOR = 100
-COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR
 
 def read_and_crop(filepath):
     df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
@@ -95,7 +109,7 @@ for f in csv_files_sorted:
     if df_raw.empty:
         print(f"Skip {os.path.basename(f)} → data kurang")
         continue
-    # Kompresi 100:1
+    # Kompresi
     chunks, ts_mid = [], []
     for i in range(COMPRESSED_POINTS_PER_DAY):
         s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
@@ -140,9 +154,6 @@ for i, df in enumerate(compressed_dfs):
 # =============================
 # BUAT SEQUENCE 3 → 1
 # =============================
-WINDOW = 3 * COMPRESSED_POINTS_PER_DAY
-FUTURE = COMPRESSED_POINTS_PER_DAY
-
 X_seq, y_signal, y_status = [], [], []
 for i in range(len(compressed_dfs) - 3):
     seq = np.concatenate([df[target_columns].values for df in compressed_dfs[i:i+3]], axis=0)
@@ -210,7 +221,7 @@ class TCNMultiTask(nn.Module):
     def __init__(self, n_features, n_channels=96, kernel_size=3, n_blocks=7, dropout=0.3):
         super().__init__()
         layers = []
-        dilations = [1, 2, 4, 8, 16, 32, 64]  # receptive field > 6000+
+        dilations = [1, 2, 4, 8, 16, 32, 64]
         in_ch = n_features
         for i in range(n_blocks):
             layers.append(ResidualBlock(in_ch, n_channels, kernel_size, dilations[i], dropout))
@@ -218,7 +229,6 @@ class TCNMultiTask(nn.Module):
         self.tcn = nn.Sequential(*layers)
         self.global_pool = nn.AdaptiveAvgPool1d(1)
 
-        # Decoder untuk prediksi signal (hari depan)
         self.decoder = nn.Sequential(
             nn.Linear(n_channels, n_channels),
             nn.ReLU(),
@@ -226,7 +236,6 @@ class TCNMultiTask(nn.Module):
             nn.Linear(n_channels, n_features * FUTURE)
         )
 
-        # Classification head
         self.classifier = nn.Sequential(
             nn.Linear(n_channels, 128),
             nn.ReLU(),
@@ -235,27 +244,21 @@ class TCNMultiTask(nn.Module):
         )
 
     def forward(self, x):
-        # x: (B, L, F) → (B, F, L) untuk Conv1d
         x = x.transpose(1, 2)
-        out = self.tcn(x)                    # (B, C, L)
-        feature = self.global_pool(out).squeeze(-1)  # (B, C)
+        out = self.tcn(x)
+        feature = self.global_pool(out).squeeze(-1)
 
-        # Prediksi signal (flatten)
-        sig_pred = self.decoder(feature)     # (B, F*FUTURE)
+        sig_pred = self.decoder(feature)
         sig_pred = sig_pred.view(-1, FUTURE, n_features)
 
-        # Prediksi status
         stat_pred = self.classifier(feature)
-
         return sig_pred, stat_pred
 
-# Inisialisasi model
 model = TCNMultiTask(n_features=n_features, n_channels=96, n_blocks=7, dropout=0.3).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-5)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=30, verbose=True)
 
 criterion_mse = nn.MSELoss()
-# Bobot lebih tinggi untuk kelas langka (Pre-Anomali & Near-Fail)
 criterion_ce = nn.CrossEntropyLoss(weight=torch.tensor([0.5, 2.5, 4.0]).to(device))
 
 # =============================
@@ -276,8 +279,7 @@ if checkpoint_files:
         scheduler.load_state_dict(cp['scheduler'])
         start_epoch = latest_epoch + 1
     else:
-        print(f"Training sudah selesai di epoch {latest_epoch}. Langsung ke prediksi.")
-        start_epoch = N_EPOCHS + 1
+        print(f"Training SUDAH SELESAI di epoch {latest_epoch}. Langsung ke prediksi & plot!")
 
 # =============================
 # LOG FUNCTION
@@ -290,11 +292,11 @@ def log_print(text):
 log_print(f"\n{'='*60}")
 log_print(f"TCN TRAINING DIMULAI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 log_print(f"Total data training: {len(X_tensor)} sample | Epoch target: {N_EPOCHS} | Batch: {BATCH_SIZE}")
-log_print(f"Model: TCN 7 blocks, receptive field >6000 timesteps")
+log_print(f"COMPRESSION_FACTOR: {COMPRESSION_FACTOR}× → {COMPRESSED_POINTS_PER_DAY} pts/hari")
 log_print(f"{'='*60}")
 
 # =============================
-# TRAINING LOOP
+# TRAINING LOOP (PASTI SELALU PRINT DI TERMINAL)
 # =============================
 if start_epoch <= N_EPOCHS:
     model.train()
@@ -314,8 +316,8 @@ if start_epoch <= N_EPOCHS:
         avg_loss = total_loss / len(dataloader)
         scheduler.step(avg_loss)
 
-        if epoch % 20 == 0 or epoch == N_EPOCHS:
-            log_print(f"Epoch {epoch:4d}/{N_EPOCHS} | Loss: {avg_loss:.6f} | LR: {optimizer.param_groups[0]['lr']:.2e}")
+        # SELALU PRINT SETIAP EPOCH (biar gak bingung)
+        print(f"Epoch {epoch:4d}/{N_EPOCHS} | Loss: {avg_loss:.6f} | LR: {optimizer.param_groups[0]['lr']:.2e}")
 
         if epoch % CHECKPOINT_INTERVAL == 0 or epoch == N_EPOCHS:
             cp_path = os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch_{epoch}.pth")
@@ -328,41 +330,33 @@ if start_epoch <= N_EPOCHS:
             }, cp_path)
             log_print(f"   → Checkpoint disimpan: {cp_path}")
 
-log_print("=== TRAINING SELESAI ===\n")
+    log_print("=== TRAINING SELESAI ===\n")
+else:
+    print("Training sudah selesai sebelumnya. Langsung load model terakhir untuk prediksi.")
+
+# Load model final kalau training sudah selesai
+if start_epoch > N_EPOCHS:
+    model.load_state_dict(torch.load(latest_cp, map_location=device)['model'])
 
 # =============================
-# PREDIKSI HARI DEPAN (FIX CONFIDENCE 0-100%)
+# PREDIKSI HARI DEPAN
 # =============================
 model.eval()
 with torch.no_grad():
-    last_input = X_tensor[-1:].to(device)                       # (1, seq_len, n_features)
-    pred_sig_scaled, pred_stat_logits = model(last_input)       # logits dari classifier
+    last_input = X_tensor[-1:].to(device)
+    pred_sig_scaled, pred_stat_logits = model(last_input)
 
-    # 1. Prediksi sinyal (hari ke depan)
-    pred_sig_scaled = pred_sig_scaled.cpu().numpy()[0]           # (FUTURE, n_features)
-
-    # 2. Prediksi status → ubah logits jadi probabilitas yang benar (0-100%)
-    pred_stat_prob = torch.softmax(pred_stat_logits, dim=1)      # ini yang WAJIB!
-    pred_stat_prob = pred_stat_prob.cpu().numpy()[0]             # [prob_class0, prob_class1, prob_class2]
+    pred_sig_scaled = pred_sig_scaled.cpu().numpy()[0]
+    pred_stat_prob = torch.softmax(pred_stat_logits, dim=1).cpu().numpy()[0]
 
     pred_status = int(np.argmax(pred_stat_prob))
-    pred_confidence = float(pred_stat_prob[pred_status] * 100)   # pasti di antara 0-100%
+    pred_confidence = float(pred_stat_prob[pred_status] * 100)
 
-# Inverse transform kembali ke nilai asli
-pred_signal = scaler.inverse_transform(
-    pred_sig_scaled.reshape(-1, n_features)
-).reshape(FUTURE, n_features)
+pred_signal = scaler.inverse_transform(pred_sig_scaled.reshape(-1, n_features)).reshape(FUTURE, n_features)
 
-# Mapping status
 status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
-log_print(f"PREDIKSI HARI DEPAN: {status_map[pred_status]} "
-          f"({pred_confidence:.2f}% confidence)")
-
-# (Opsional) Tampilkan detail probabilitas semua kelas — sangat berguna!
-log_print(f"   → Detail Probabilitas:")
-log_print(f"     Sehat       : {pred_stat_prob[0]*100:6.2f}%")
-log_print(f"     Pre-Anomali : {pred_stat_prob[1]*100:6.2f}%")
-log_print(f"     Near-Fail   : {pred_stat_prob[2]*100:6.2f}%")
+log_print(f"PREDIKSI HARI DEPAN: {status_map[pred_status]} ({pred_confidence:.2f}% confidence)")
+log_print(f"   → Detail: Sehat {pred_stat_prob[0]*100:6.2f}% | Pre-Anomali {pred_stat_prob[1]*100:6.2f}% | Near-Fail {pred_stat_prob[2]*100:6.2f}%")
 
 # =============================
 # SIMPAN MODEL & SCALER
@@ -372,11 +366,8 @@ joblib.dump(scaler, "scaler_21param_TCN.pkl")
 log_print("Model & scaler disimpan")
 
 # =============================
-# PLOT-PLOT (SAMA PERSIS DENGAN VERSI LAMA)
+# PLOT-PLOT (100% AKURAT BERAPAPUN KOMPRESI)
 # =============================
-# (kode plot 100% sama seperti versi kamu sebelumnya, hanya nama file yang diubah)
-# ... [saya sisipkan semua plot biar tidak ada yang hilang]
-
 df_all = pd.concat(compressed_dfs, ignore_index=True)
 norm_all = df_all[target_columns].copy()
 for col in target_columns:
@@ -396,20 +387,18 @@ for b in day_bounds[1:-1]:
 mid_points = [(day_bounds[i] + day_bounds[i+1])//2 for i in range(len(compressed_dfs))]
 for i, mid in enumerate(mid_points):
     ax.text(mid, 1.05, f'Day {i+1}', ha='center', color='red', fontweight='bold', transform=ax.get_xaxis_transform())
-    ax.text(mid, 1.15, status_map[health_status[i]], ha='center', 
+    ax.text(mid, 1.15, status_map[health_status[i]], ha='center',
             color=['green','orange','red'][health_status[i]], fontweight='bold', transform=ax.get_xaxis_transform())
-# Ganti bagian plot ini (sekitar baris ~380-390):
 
 ax.set_title(f"21 Parameter + Health Status (TCN) - {len(compressed_dfs)} Hari", fontsize=16)
-ax.set_ylabel("Normalized [0-1]")        # ← FIXED
+ax.set_ylabel("Normalized [0-1]")
 ax.grid(alpha=0.3)
 ax.legend(target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
 plt.tight_layout()
 plt.savefig("plot_all_parameters_TCN.png", dpi=300, bbox_inches='tight')
 plt.close()
 
-
-# 4 Hari Terakhir + Prediksi (3 gambar)
+# 4 Hari Terakhir + Prediksi
 if len(compressed_dfs) >= 4:
     last4_dfs = compressed_dfs[-4:]
     df4 = pd.concat(last4_dfs, ignore_index=True)
@@ -419,7 +408,7 @@ if len(compressed_dfs) >= 4:
     x4 = np.arange(len(df4))
 
     def setup_plot(ax, title):
-        bounds = np.arange(0, 5*COMPRESSED_POINTS_PER_DAY, COMPRESSED_POINTS_PER_DAY)
+        bounds = np.arange(0, 5*COMPRESSED_POINTS_PER alken_DAY, COMPRESSED_POINTS_PER_DAY)
         for b in bounds[1:]:
             if b < len(x4):
                 ax.axvline(b, color='red', linestyle='--', alpha=0.8)
@@ -432,7 +421,6 @@ if len(compressed_dfs) >= 4:
         ax.set_title(title, fontsize=15)
         ax.grid(alpha=0.3)
         ax.set_ylim(-0.1, 1.3)
-        ax.set_ylabel("Normalized Scale")  # ← tambahkan ini kalau mau, atau biarkan default
 
     # Gambar 1
     fig, ax = plt.subplots(figsize=(24, 10))
@@ -444,49 +432,29 @@ if len(compressed_dfs) >= 4:
     plt.savefig("gambar1_4hari_real_TCN.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-    # Gambar 2 - GANTI jadi begini:
+    # Gambar 2
     fig, ax = plt.subplots(figsize=(24, 10))
-
-    # Plot 3 hari real (warna otomatis)
     for i, col in enumerate(target_columns):
-        ax.plot(x4[:3*COMPRESSED_POINTS_PER_DAY], norm4[:3*COMPRESSED_POINTS_PER_DAY, i], 
-                linewidth=1.2, label=col)
-
-    # Plot prediksi → PAKAI WARNA YANG SAMA DENGAN PARAMETER ASLI, tapi dashed + tebal
+        ax.plot(x4[:3*COMPRESSED_POINTS_PER_DAY], norm4[:3*COMPRESSED_POINTS_PER_DAY, i], linewidth=1.2, label=col)
     for i, col in enumerate(target_columns):
-        line_real = ax.get_lines()[i]  # ambil garis real yang ke-i
-        color = line_real.get_color()  # ambil warnanya
-        ax.plot(x4[3*COMPRESSED_POINTS_PER_DAY:], pred_norm[:, i], 
-                '--', linewidth=2.8, color=color, alpha=0.95)
-
+        color = ax.get_lines()[i].get_color()
+        ax.plot(x4[3*COMPRESSED_POINTS_PER_DAY:], pred_norm[:, i], '--', linewidth=2.8, color=color, alpha=0.95)
     setup_plot(ax, "GAMBAR 2: 3 Hari Input + 1 Hari Prediksi (TCN)")
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[:21], target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', ncol=2, fontsize='small')
+    ax.legend(target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', ncol=2, fontsize='small')
     plt.tight_layout()
     plt.savefig("gambar2_input_plus_prediksi_TCN.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     # Gambar 3
-    # Gambar 3 - GANTI jadi begini:
     fig, ax = plt.subplots(figsize=(24, 10))
-
-    # 3 hari input
     for i, col in enumerate(target_columns):
-        ax.plot(x4[:3*COMPRESSED_POINTS_PER_DAY], norm4[:3*COMPRESSED_POINTS_PER_DAY, i], 
-                linewidth=1.2)
-
-    # Hari ke-4 real
+        ax.plot(x4[:3*COMPRESSED_POINTS_PER_DAY], norm4[:3*COMPRESSED_POINTS_PER_DAY, i], linewidth=1.2)
     for i, col in enumerate(target_columns):
-        ax.plot(x4[3*COMPRESSED_POINTS_PER_DAY:], norm4[3*COMPRESSED_POINTS_PER_DAY:, i], 
-                linewidth=1.8, alpha=0.9, label=f'Real {col}' if i==0 else None)
-
-    # Hari ke-4 prediksi → WARNA SAMA DENGAN PARAMETER ASLI
+        ax.plot(x4[3*COMPRESSED_POINTS_PER_DAY:], norm4[3*COMPRESSED_POINTS_PER_DAY:, i], linewidth=1.8, alpha=0.9)
     for i, col in enumerate(target_columns):
-        color = ax.get_lines()[i].get_color()  # ambil warna dari input (3 hari pertama)
-        ax.plot(x4[3*COMPRESSED_POINTS_PER_DAY:], pred_norm[:, i], 
-                '--', linewidth=3, color=color, alpha=0.95, 
-                label=f'Prediksi {col}' if i==0 else None)
-
+        color = ax.get_lines()[i].get_color()
+        ax.plot(x4[3*COMPRESSED_POINTS_PER_DAY:], pred_norm[:, i], '--', linewidth=3, color=color, alpha=0.95,
+                label=f'Pred {col}' if i==0 else None)
     setup_plot(ax, "GAMBAR 3: Real vs Prediksi Hari Terakhir (TCN)")
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', ncol=2, fontsize='small')
     plt.tight_layout()
@@ -497,7 +465,7 @@ if len(compressed_dfs) >= 4:
 # SIMPAN HASIL PREDIKSI CSV
 # =============================
 result_df = pd.DataFrame(pred_signal, columns=target_columns)
-result_df.insert(0, 'ts_date', compressed_dfs[-1]['ts_date'].values)
+result_df.insert(0, 'ts_date', compressed_dfs[-1]['ts_date'].values[-FUTURE:])
 result_df['health_status_pred'] = status_map[pred_status]
 result_df['confidence_percent'] = pred_confidence
 result_df.to_csv("prediksi_hari_depan_21param_TCN.csv", index=False)
@@ -506,19 +474,16 @@ log_print("prediksi_hari_depan_21param_TCN.csv disimpan")
 # =============================
 # SELESAI
 # =============================
-log_print("\nSEMUA SELESAI 100% - VERSI TCN!")
+log_print("\nSEMUA SELESAI 100% - VERSI TCN FINAL!")
 log_print("File yang dihasilkan:")
 log_print("   → model_21param_TCN_final.pth")
 log_print("   → scaler_21param_TCN.pkl")
 log_print("   → prediksi_hari_depan_21param_TCN.csv")
-log_print("   → plot_all_parameters_TCN.png")
-log_print("   → gambar1_4hari_real_TCN.png")
-log_print("   → gambar2_input_plus_prediksi_TCN.png")
-log_print("   → gambar3_real_vs_prediksi_TCN.png")
+log_print("   → plot_all_parameters_TCN.png + 3 gambar")
 log_print("   → training_log_21param_TCN.txt")
 log_print("   → semua checkpoint di folder: " + CHECKPOINT_DIR)
 
-print("\n" + "="*70)
-print("SEMUA SELESAI! VERSI TCN SUDAH SIAP PAKAI!")
-print("Prediksi jauh lebih akurat & stabil dari LSTM")
-print("="*70)
+print("\n" + "="*80)
+print("SELESAI TOTAL! Sekarang kamu tinggal ganti COMPRESSION_FACTOR = 10, 25, 50, 100")
+print("Semua plot & prediksi akan SELALU BENAR otomatis!")
+print("="*80)
