@@ -22,7 +22,7 @@ from torch.utils.data import Dataset, DataLoader
 # TOMBOL UTAMA
 # ==================================================================
 USE_REAL_DATA_MODE = False
-N_DUPLICATES = 100         # Bisa 1000, 5000, atau berapapun
+N_DUPLICATES = 1000         # Bisa 1000, 5000, atau berapapun
 N_EPOCHS = 1000              # Total epoch yang diinginkan
 CHECKPOINT_INTERVAL = 50     # Simpan tiap berapa epoch
 CHECKPOINT_DIR = "checkpoints"
