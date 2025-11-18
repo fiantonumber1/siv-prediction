@@ -1,5 +1,5 @@
 # =============================
-# FULL CODE PYTORCH + GPU + CHECKPOINTING (LANJUTKAN KALAU PUTUS)
+# FULL CODE PYTORCH + GPU + CHECKPOINTING (VERSI 1 VARIABEL SAJA)
 # =============================
 
 import pandas as pd
@@ -22,26 +22,22 @@ from torch.utils.data import Dataset, DataLoader
 # TOMBOL UTAMA
 # ==================================================================
 USE_REAL_DATA_MODE = False
-N_DUPLICATES = 1000         # Bisa 1000, 5000, atau berapapun
-N_EPOCHS = 1000              # Total epoch yang diinginkan
-CHECKPOINT_INTERVAL = 50     # Simpan tiap berapa epoch
+N_DUPLICATES = 1000         
+N_EPOCHS = 1000              
+CHECKPOINT_INTERVAL = 50     
 CHECKPOINT_DIR = "checkpoints"
 # ==================================================================
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
-# Buat folder checkpoint kalau belum ada
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 
 # =============================
-# 1. BACA FILE CSV (sama seperti sebelumnya)
+# 1. BACA FILE CSV
 # =============================
-# ... (kode baca CSV, crop, kompresi, duplikasi identik tetap 100% sama) ...
-# (Saya skip bagian ini karena panjang & tidak berubah)
-
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
 csv_files = [f for f in csv_files 
              if len(os.path.basename(f)) >= 12 
@@ -54,21 +50,24 @@ if len(csv_files) == 0:
 template_file = csv_files[0]
 print(f"Template: {os.path.basename(template_file)} → duplikasi {N_DUPLICATES}x")
 
-target_columns = [
-    'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
-    'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
-    'SIV_U_Battery', 'SIV_U_DC_In', 'SIV_U_DC_Out', 'SIV_U_L1', 'SIV_U_L2', 'SIV_U_L3',
-    'SIV_InConv_InEnergy', 'SIV_Output_Energy',
-    'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive'
-]
+# =============================
+# 2. TARGET KOLOM — HANYA 1 VARIABEL: SIV_I_L1
+# =============================
+target_columns = ['SIV_I_L1']   # <<< SATU-SATUNYA VARIABEL
 
+# =============================
+# 3. PARAMETER CROPPING & KOMPRESI
+# =============================
 START_TIME = time(6, 0, 0)
 END_TIME   = time(18, 16, 35)
 N_DROP_FIRST = 3600
 N_TAKE = 150_000
-COMPRESSION_FACTOR = 10
+COMPRESSION_FACTOR = 100
 COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR
 
+# =============================
+# 4. FUNGSI BACA + CROP
+# =============================
 def read_and_crop(filepath):
     df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
     df.columns = [col.strip() for col in df.columns]
@@ -112,14 +111,16 @@ for day_idx in range(N_DUPLICATES):
 
 print(f"Berhasil buat {N_DUPLICATES} hari identik")
 
-# Labeling (sama)
+# =============================
+# 7-8. LABELING (tetap pakai SIV_I_L1, tapi logika bisa disesuaikan kalau perlu)
+# =============================
 def label_health_status(df_day: pd.DataFrame) -> tuple:
-    energy = df_day['SIV_Output_Energy']
+    energy = df_day['SIV_I_L1']   # ganti sesuai kebutuhan kalau logika beda
     max_energy = energy.max()
     if max_energy == 0:
-        return 0, "No energy data"
+        return 0, "No data"
     drop = energy.diff()
-    failures = ((drop < -0.5 * max_energy) & (drop < 0)).sum()
+    failures = ((drop < -0.3 * max_energy) & (drop < 0)).sum()
     if failures == 0:
         return 0, "No failure"
     elif failures == 1:
@@ -130,10 +131,12 @@ def label_health_status(df_day: pd.DataFrame) -> tuple:
 print("\nLABEL HEALTH STATUS:")
 health_status = [label_health_status(df)[0] for df in compressed_dfs]
 
-# Siapkan data
+# =============================
+# 9. SIAPKAN DATA
+# =============================
 WINDOW = 3 * COMPRESSED_POINTS_PER_DAY
 FUTURE = COMPRESSED_POINTS_PER_DAY
-n_features = len(target_columns)
+n_features = len(target_columns)  # sekarang = 1
 
 X_seq, y_signal, y_status = [], [], []
 for i in range(len(compressed_dfs) - 3):
@@ -145,7 +148,9 @@ X_seq = np.array(X_seq, dtype=np.float32)
 y_signal = np.array(y_signal, dtype=np.float32)
 y_status = np.array(y_status, dtype=np.int64)
 
-# Scaler
+# =============================
+# SCALER
+# =============================
 scaler = MinMaxScaler(feature_range=(-0.2, 1.2))
 X_scaled = scaler.fit_transform(X_seq.reshape(-1, n_features)).reshape(X_seq.shape)
 y_signal_scaled = scaler.transform(y_signal.reshape(-1, n_features)).reshape(y_signal.shape)
@@ -154,7 +159,9 @@ X_tensor = torch.from_numpy(X_scaled).to(device)
 y_signal_tensor = torch.from_numpy(y_signal_scaled).to(device)
 y_status_tensor = torch.from_numpy(y_status).to(device)
 
-# Dataset
+# =============================
+# Dataset & DataLoader
+# =============================
 class SeqDataset(Dataset):
     def __init__(self, X, y_sig, y_stat):
         self.X, self.y_sig, self.y_stat = X, y_sig, y_stat
@@ -165,7 +172,9 @@ class SeqDataset(Dataset):
 dataset = SeqDataset(X_tensor, y_signal_tensor, y_status_tensor)
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-# Model
+# =============================
+# Model PyTorch (tetap sama, cuma n_features = 1)
+# =============================
 class MultiTaskSeq2Seq(nn.Module):
     def __init__(self, n_features):
         super().__init__()
@@ -191,34 +200,31 @@ criterion_mse = nn.MSELoss()
 criterion_ce = nn.CrossEntropyLoss()
 
 # =============================
-# CHECKPOINT: Cek apakah ada checkpoint
+# CHECKPOINT
 # =============================
 start_epoch = 1
 checkpoint_path = None
 
-# Cari checkpoint terakhir
 checkpoint_files = glob.glob(os.path.join(CHECKPOINT_DIR, "checkpoint_epoch_*.pth"))
 if checkpoint_files:
-    # Ambil yang epoch terbesar
     epochs = [int(f.split('_')[-1].replace('.pth', '')) for f in checkpoint_files]
     latest_epoch = max(epochs)
     checkpoint_path = os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch_{latest_epoch}.pth")
     
     if latest_epoch < N_EPOCHS:
-        print(f"Melanjutkan training dari epoch {latest_epoch + 1} (checkpoint ditemukan)")
+        print(f"Melanjutkan training dari epoch {latest_epoch + 1}")
         checkpoint = torch.load(checkpoint_path)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         start_epoch = latest_epoch + 1
     else:
-        print(f"Training sudah selesai di epoch {latest_epoch}. Tidak perlu lanjut.")
-        start_epoch = N_EPOCHS + 1  # Skip training
-
+        print(f"Training sudah selesai di epoch {latest_epoch}.")
+        start_epoch = N_EPOCHS + 1
 else:
-    print("Tidak ada checkpoint. Mulai training dari awal.")
+    print("Tidak ada checkpoint. Mulai dari awal.")
 
 # =============================
-# TRAINING DENGAN CHECKPOINT
+# TRAINING
 # =============================
 if start_epoch <= N_EPOCHS:
     print(f"\nTraining dari epoch {start_epoch} sampai {N_EPOCHS}...")
@@ -238,7 +244,6 @@ if start_epoch <= N_EPOCHS:
         if epoch % 20 == 0 or epoch == N_EPOCHS:
             print(f"Epoch {epoch:4d}/{N_EPOCHS} | Loss: {total_loss:.6f}")
 
-        # Simpan checkpoint
         if epoch % CHECKPOINT_INTERVAL == 0 or epoch == N_EPOCHS:
             cp_path = os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch_{epoch}.pth")
             torch.save({
@@ -247,10 +252,10 @@ if start_epoch <= N_EPOCHS:
                 'optimizer': optimizer.state_dict(),
                 'loss': total_loss
             }, cp_path)
-            print(f"   → Checkpoint disimpan: {cp_path}")
+            print(f"   → Checkpoint: {cp_path}")
 
 # =============================
-# SELESAI TRAINING → PREDIKSI & PLOT (sama seperti sebelumnya)
+# PREDIKSI HARI TERAKHIR
 # =============================
 model.eval()
 with torch.no_grad():
@@ -267,7 +272,7 @@ status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
 print(f"\nPREDIKSI HARI TERAKHIR: {status_map[pred_status]} ({pred_confidence:.1f}% confidence)")
 
 # =============================
-# SEMUA PLOT — 100% SAMA DENGAN VERSI TF
+# PLOT SEMUA (tetap sama, cuma 1 garis)
 # =============================
 df_final = pd.concat(compressed_dfs, ignore_index=True)
 data_norm = df_final[target_columns].copy()
@@ -278,7 +283,7 @@ for col in target_columns:
 x_index = np.arange(len(df_final))
 fig, ax = plt.subplots(figsize=(20, 8))
 for col in target_columns:
-    ax.plot(x_index, data_norm[col], linewidth=0.9, alpha=0.7)
+    ax.plot(x_index, data_norm[col], linewidth=1.2, label=col)
 
 n_days = len(compressed_dfs)
 day_boundaries = np.arange(0, (n_days + 1) * COMPRESSED_POINTS_PER_DAY, COMPRESSED_POINTS_PER_DAY)
@@ -294,17 +299,17 @@ for i, mid in enumerate(mid_points):
             transform=ax.get_xaxis_transform())
 
 ax.set_xlim(0, len(df_final))
-ax.set_title(f"Semua Parameter + Health Status - {n_days} Hari (DATA IDENTIK)", fontsize=14)
+ax.set_title(f"SIV_I_L1 + Health Status - {n_days} Hari (DATA IDENTIK)", fontsize=14)
 ax.set_xlabel("Hari")
 ax.set_ylabel("Nilai Normalisasi [0-1]")
 ax.grid(True, alpha=0.3)
-ax.legend(target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+ax.legend()
 plt.tight_layout()
-plt.savefig("plot_all_parameters_with_status.png", dpi=300, bbox_inches='tight')
+plt.savefig("plot_SIV_I_L1_with_status.png", dpi=300, bbox_inches='tight')
 plt.close()
 
 # =============================
-# 4 HARI TERAKHIR + PREDIKSI (3 GAMBAR)
+# 4 HARI TERAKHIR + PREDIKSI (3 gambar tetap sama)
 # =============================
 if len(compressed_dfs) >= 4:
     all_dfs_4 = compressed_dfs[-4:]
@@ -343,77 +348,53 @@ if len(compressed_dfs) >= 4:
 
     # Gambar 1
     fig1, ax1 = plt.subplots(figsize=(20, 8))
-    for i, col in enumerate(target_columns):
-        ax1.plot(x_full, X_norm[:, i], label=col, linewidth=0.9, alpha=0.7)
-    setup_plot(ax1, 'GAMBAR 1: 4 Hari Real + Health Status')
-    ax1.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+    ax1.plot(x_full, X_norm[:, 0], linewidth=1.2, label='SIV_I_L1')
+    setup_plot(ax1, 'GAMBAR 1: 4 Hari Real SIV_I_L1 + Health Status')
+    ax1.legend()
     plt.tight_layout()
-    plt.savefig("gambar1_4hari_real_with_status.png", dpi=300, bbox_inches='tight')
+    plt.savefig("gambar1_4hari_SIV_I_L1.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     # Gambar 2
     fig2, ax2 = plt.subplots(figsize=(20, 8))
-    handles = []
-    for i, col in enumerate(target_columns):
-        h = ax2.plot(x_full[:3*COMPRESSED_POINTS_PER_DAY], X_norm[:3*COMPRESSED_POINTS_PER_DAY, i],
-                     label=col, linewidth=0.9, alpha=0.7)[0]
-        handles.append(h)
-    for i, col in enumerate(target_columns):
-        ax2.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], y_pred_norm[:, i],
-                 '--', linewidth=1.8, alpha=0.9)
-    setup_plot(ax2, 'GAMBAR 2: 3 Hari Input + 1 Hari Prediksi + Status')
-    ax2.legend(handles, target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+    ax2.plot(x_full[:3*COMPRESSED_POINTS_PER_DAY], X_norm[:3*COMPRESSED_POINTS_PER_DAY, 0], label='SIV_I_L1 (Input)', linewidth=1.2)
+    ax2.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], y_pred_norm[:, 0], '--', linewidth=2.0, label='Prediksi')
+    setup_plot(ax2, 'GAMBAR 2: 3 Hari Input + Prediksi SIV_I_L1')
+    ax2.legend()
     plt.tight_layout()
-    plt.savefig("gambar2_input_plus_prediksi_with_status.png", dpi=300, bbox_inches='tight')
+    plt.savefig("gambar2_input_plus_prediksi_SIV_I_L1.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     # Gambar 3
     fig3, ax3 = plt.subplots(figsize=(20, 8))
-    handles3 = []
-    for i, col in enumerate(target_columns):
-        h = ax3.plot(x_full[:3*COMPRESSED_POINTS_PER_DAY], X_norm[:3*COMPRESSED_POINTS_PER_DAY, i],
-                     label=col, linewidth=0.9, alpha=0.7)[0]
-        handles3.append(h)
-    for i, col in enumerate(target_columns):
-        ax3.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], X_norm[3*COMPRESSED_POINTS_PER_DAY:, i],
-                 linewidth=1.2, alpha=0.8)
-        ax3.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], y_pred_norm[:, i],
-                 '--', linewidth=1.8, alpha=0.9)
-    setup_plot(ax3, 'GAMBAR 3: Day 4 → Real vs Prediksi + Status')
-    ax3.legend(handles3, target_columns, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize='small', ncol=2)
+    ax3.plot(x_full[:3*COMPRESSED_POINTS_PER_DAY], X_norm[:3*COMPRESSED_POINTS_PER_DAY, 0], label='Input', linewidth=1.2)
+    ax3.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], X_norm[3*COMPRESSED_POINTS_PER_DAY:, 0], label='Real Day 4', linewidth=1.5)
+    ax3.plot(x_full[3*COMPRESSED_POINTS_PER_DAY:], y_pred_norm[:, 0], '--', linewidth=2.0, label='Prediksi')
+    setup_plot(ax3, 'GAMBAR 3: Real vs Prediksi SIV_I_L1 (Day 4)')
+    ax3.legend()
     plt.tight_layout()
-    plt.savefig("gambar3_real_vs_prediksi_with_status.png", dpi=300, bbox_inches='tight')
+    plt.savefig("gambar3_real_vs_prediksi_SIV_I_L1.png", dpi=300, bbox_inches='tight')
     plt.close()
 
 # =============================
 # SIMPAN MODEL & HASIL
 # =============================
-torch.save(model.state_dict(), "multitask_seq2seq_classification.pth")
-joblib.dump(scaler, "scaler_multitask.pkl")
+torch.save(model.state_dict(), "model_SIV_I_L1_only.pth")
+joblib.dump(scaler, "scaler_SIV_I_L1.pkl")
 
 result_df = pd.DataFrame({'ts_date': compressed_dfs[-1]['ts_date'].values})
-for i, col in enumerate(target_columns):
-    result_df[f'actual_{col}'] = y_true_day4[:, i]
-    result_df[f'pred_{col}'] = pred_signal[:, i]
+result_df['actual_SIV_I_L1'] = y_true_day4[:, 0]
+result_df['pred_SIV_I_L1'] = pred_signal[:, 0]
 result_df['health_status_pred'] = pred_status
 result_df['confidence_%'] = pred_confidence
-result_df.to_csv("hasil_prediksi_dan_status.csv", index=False)
+result_df.to_csv("hasil_prediksi_SIV_I_L1.csv", index=False)
 
-print("\nSELESAI 100%! Semua file sudah dibuat:")
-print("   health_status_per_day.csv")
-print("   plot_all_parameters_with_status.png")
-print("   gambar1_4hari_real_with_status.png")
-print("   gambar2_input_plus_prediksi_with_status.png")
-print("   gambar3_real_vs_prediksi_with_status.png")
-print("   multitask_seq2seq_classification.pth")
-print("   scaler_multitask.pkl")
-print("   hasil_prediksi_dan_status.csv")
-
-# Hapus folder checkpoint kalau training sudah selesai (opsional)
-if start_epoch > N_EPOCHS:
-    import shutil
-    if os.path.exists(CHECKPOINT_DIR):
-        shutil.rmtree(CHECKPOINT_DIR)
-        print(f"Folder {CHECKPOINT_DIR} dihapus (training selesai).")
-
-print("\nSELESAI 100%! Semua file sudah dibuat + checkpoint aman.")
+print("\nSELESAI! Hanya menggunakan SIV_I_L1")
+print("File yang dihasilkan:")
+print("   plot_SIV_I_L1_with_status.png")
+print("   gambar1_4hari_SIV_I_L1.png")
+print("   gambar2_input_plus_prediksi_SIV_I_L1.png")
+print("   gambar3_real_vs_prediksi_SIV_I_L1.png")
+print("   model_SIV_I_L1_only.pth")
+print("   scaler_SIV_I_L1.pkl")
+print("   hasil_prediksi_SIV_I_L1.csv")

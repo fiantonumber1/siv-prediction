@@ -39,8 +39,6 @@ folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in global
 # =============================
 # 1. BACA FILE CSV (sama seperti sebelumnya)
 # =============================
-# ... (kode baca CSV, crop, kompresi, duplikasi identik tetap 100% sama) ...
-# (Saya skip bagian ini karena panjang & tidak berubah)
 
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
 csv_files = [f for f in csv_files 
@@ -54,6 +52,11 @@ if len(csv_files) == 0:
 template_file = csv_files[0]
 print(f"Template: {os.path.basename(template_file)} → duplikasi {N_DUPLICATES}x")
 
+
+# =============================
+# 2. TARGET KOLOM
+# =============================
+
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
     'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
@@ -62,6 +65,9 @@ target_columns = [
     'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive'
 ]
 
+# =============================
+# 3. PARAMETER CROPPING & KOMPRESI
+# =============================
 START_TIME = time(6, 0, 0)
 END_TIME   = time(18, 16, 35)
 N_DROP_FIRST = 3600
@@ -69,6 +75,9 @@ N_TAKE = 150_000
 COMPRESSION_FACTOR = 100
 COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR
 
+# =============================
+# 4. FUNGSI BACA + CROP
+# =============================
 def read_and_crop(filepath):
     df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
     df.columns = [col.strip() for col in df.columns]
@@ -112,6 +121,9 @@ for day_idx in range(N_DUPLICATES):
 
 print(f"Berhasil buat {N_DUPLICATES} hari identik")
 
+# =============================
+# 7-8. LABELING
+# =============================
 # Labeling (sama)
 def label_health_status(df_day: pd.DataFrame) -> tuple:
     energy = df_day['SIV_Output_Energy']
@@ -130,7 +142,9 @@ def label_health_status(df_day: pd.DataFrame) -> tuple:
 print("\nLABEL HEALTH STATUS:")
 health_status = [label_health_status(df)[0] for df in compressed_dfs]
 
-# Siapkan data
+# =============================
+# 9. SIAPKAN DATA
+# =============================
 WINDOW = 3 * COMPRESSED_POINTS_PER_DAY
 FUTURE = COMPRESSED_POINTS_PER_DAY
 n_features = len(target_columns)
@@ -145,6 +159,10 @@ X_seq = np.array(X_seq, dtype=np.float32)
 y_signal = np.array(y_signal, dtype=np.float32)
 y_status = np.array(y_status, dtype=np.int64)
 
+
+# =============================
+# SCALER
+# =============================
 # Scaler
 scaler = MinMaxScaler(feature_range=(-0.2, 1.2))
 X_scaled = scaler.fit_transform(X_seq.reshape(-1, n_features)).reshape(X_seq.shape)
@@ -154,6 +172,9 @@ X_tensor = torch.from_numpy(X_scaled).to(device)
 y_signal_tensor = torch.from_numpy(y_signal_scaled).to(device)
 y_status_tensor = torch.from_numpy(y_status).to(device)
 
+# =============================
+# Dataset & DataLoader
+# =============================
 # Dataset
 class SeqDataset(Dataset):
     def __init__(self, X, y_sig, y_stat):
@@ -165,7 +186,9 @@ class SeqDataset(Dataset):
 dataset = SeqDataset(X_tensor, y_signal_tensor, y_status_tensor)
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-# Model
+# =============================
+# Model PyTorch
+# =============================
 class MultiTaskSeq2Seq(nn.Module):
     def __init__(self, n_features):
         super().__init__()
@@ -249,8 +272,9 @@ if start_epoch <= N_EPOCHS:
             }, cp_path)
             print(f"   → Checkpoint disimpan: {cp_path}")
 
+
 # =============================
-# SELESAI TRAINING → PREDIKSI & PLOT (sama seperti sebelumnya)
+# PREDIKSI HARI TERAKHIR
 # =============================
 model.eval()
 with torch.no_grad():
