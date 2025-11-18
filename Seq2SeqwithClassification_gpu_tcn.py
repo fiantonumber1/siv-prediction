@@ -408,7 +408,7 @@ if len(compressed_dfs) >= 4:
     x4 = np.arange(len(df4))
 
     def setup_plot(ax, title):
-        bounds = np.arange(0, 5*COMPRESSED_POINTS_PER alken_DAY, COMPRESSED_POINTS_PER_DAY)
+        bounds = np.arange(0, 5*COMPRESSED_POINTS_PER_DAY, COMPRESSED_POINTS_PER_DAY)
         for b in bounds[1:]:
             if b < len(x4):
                 ax.axvline(b, color='red', linestyle='--', alpha=0.8)
