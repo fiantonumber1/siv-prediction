@@ -22,7 +22,7 @@ N_DUPLICATES       = 1000      # berapa hari identik
 N_EPOCHS           = 1000
 CHECKPOINT_INTERVAL= 50
 CHECKPOINT_DIR     = "checkpoints_single"
-VARIABLE           = 'SIV_T_HS_InConv_1'   # <--- SATU VARIABEL SAJA
+VARIABLE           = 'SIV_I_L1'   # <--- SATU VARIABEL SAJA
 # ==================================================================
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -47,7 +47,7 @@ START_TIME = time(6, 0, 0)
 END_TIME   = time(18, 16, 35)
 N_DROP_FIRST = 3600
 N_TAKE = 150_000
-COMPRESSION_FACTOR = 10
+COMPRESSION_FACTOR = 100
 POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR          # 15_000
 
 def read_crop_compress(filepath):
