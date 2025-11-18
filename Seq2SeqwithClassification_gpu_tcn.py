@@ -24,13 +24,13 @@ from torch.utils.data import Dataset, DataLoader
 # ==================================================================
 USE_REAL_DATA_MODE = True          # True = pakai CSV asli | False = duplikasi
 N_DUPLICATES = 20                   # hanya dipakai kalau False
-N_EPOCHS = 600
+N_EPOCHS = 1000
 BATCH_SIZE = 4
 CHECKPOINT_INTERVAL = 50
 CHECKPOINT_DIR = "checkpoints_21param_TCN"
 LOG_FILE = "training_log_21param_TCN.txt"
 
-COMPRESSION_FACTOR = 50             # ← INI SATU-SATUNYA YANG KAMU UBAH LAGI SELAMANYA
+COMPRESSION_FACTOR = 10             # ← INI SATU-SATUNYA YANG KAMU UBAH LAGI SELAMANYA
 # 100 = cepat, 50 = sedang, 25 = detail, 10 = super detail
 # ==================================================================
 
