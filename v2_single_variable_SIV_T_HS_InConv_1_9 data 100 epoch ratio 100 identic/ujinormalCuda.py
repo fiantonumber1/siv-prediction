@@ -22,8 +22,8 @@ from torch.utils.data import Dataset, DataLoader
 # TOMBOL UTAMA
 # ==================================================================
 USE_REAL_DATA_MODE = False
-N_DUPLICATES = 1000         
-N_EPOCHS = 1000              
+N_DUPLICATES = 9         
+N_EPOCHS = 100            
 CHECKPOINT_INTERVAL = 50     
 CHECKPOINT_DIR = "checkpoints"
 # ==================================================================
