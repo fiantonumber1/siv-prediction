@@ -32,7 +32,7 @@ CHECKPOINT_DIR = "checkpoints_21param_TCN"
 LOG_FILE = "training_log_21param_TCN.txt"
 VAL_RATIO = 0.2
 
-COMPRESSION_FACTOR = 10             # 100=cepat, 50=sedang, 25=detail, 10=super detail
+COMPRESSION_FACTOR = 1000             # 100=cepat, 50=sedang, 25=detail, 10=super detail
 # ==================================================================
 
 N_TAKE = 150_000
