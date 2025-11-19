@@ -1,0 +1,41 @@
+
+============================================================
+TCN TRAINING DIMULAI - 2025-11-18 19:43:28
+Total data training: 6 sample | Epoch target: 1000 | Batch: 4
+COMPRESSION_FACTOR: 10× → 15000 pts/hari
+============================================================
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_50.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_100.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_150.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_200.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_250.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_300.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_350.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_400.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_450.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_500.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_550.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_600.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_650.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_700.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_750.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_800.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_850.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_900.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_950.pth
+   → Checkpoint disimpan: checkpoints_21param_TCN\checkpoint_epoch_1000.pth
+=== TRAINING SELESAI ===
+
+PREDIKSI HARI DEPAN: Sehat (100.00% confidence)
+   → Detail: Sehat 100.00% | Pre-Anomali   0.00% | Near-Fail   0.00%
+Model & scaler disimpan
+prediksi_hari_depan_21param_TCN.csv disimpan
+
+SEMUA SELESAI 100% - VERSI TCN FINAL!
+File yang dihasilkan:
+   → model_21param_TCN_final.pth
+   → scaler_21param_TCN.pkl
+   → prediksi_hari_depan_21param_TCN.csv
+   → plot_all_parameters_TCN.png + 3 gambar
+   → training_log_21param_TCN.txt
+   → semua checkpoint di folder: checkpoints_21param_TCN
