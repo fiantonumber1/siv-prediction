@@ -1,6 +1,7 @@
 # =============================
 # SEQ2SEQ + CLASSIFICATION 21 PARAMETER - FULL TCN VERSION
-# VERSI FINAL: UBAH SATU ANGKA SAJA → SEMUA OTOMATIS BENAR
+# VERSI FINAL KHUSUS DATA REAL 100% (TIDAK ADA DUPLIKASI SAMA SEKALI)
+# + MSE FORECAST & ACCURACY KLASIFIKASI PER EPOCH (DISIMPAN DI LOG)
 # =============================
 
 import pandas as pd
@@ -22,16 +23,14 @@ from torch.utils.data import Dataset, DataLoader
 # ==================================================================
 # TOMBOL UTAMA - UBAH DI SINI AJA SELAMANYA
 # ==================================================================
-USE_REAL_DATA_MODE = True          # True = pakai CSV asli | False = duplikasi
-N_DUPLICATES = 20                   # hanya dipakai kalau False
 N_EPOCHS = 1000
 BATCH_SIZE = 4
 CHECKPOINT_INTERVAL = 50
 CHECKPOINT_DIR = "checkpoints_21param_TCN"
 LOG_FILE = "training_log_21param_TCN.txt"
 
-COMPRESSION_FACTOR = 10             # ← INI SATU-SATUNYA YANG KAMU UBAH LAGI SELAMANYA
-# 100 = cepat, 50 = sedang, 25 = detail, 10 = super detail
+COMPRESSION_FACTOR = 10             # SATU-SATUNYA ANGKA YANG PERNAH KAMU UBAH
+# 100 = cepat | 50 = sedang | 25 = detail | 10 = super detail
 # ==================================================================
 
 # ================== AUTO-CALCULATED — JANGAN DIUBAH MANUAL ==================
@@ -52,7 +51,6 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 
-# Print info kompresi biar jelas
 print(f"\n[CONFIG] COMPRESSION_FACTOR = {COMPRESSION_FACTOR}×")
 print(f"         → {COMPRESSED_POINTS_PER_DAY} titik = 1 hari penuh")
 print(f"         → Input sequence  = {WINDOW} timesteps (3 hari)")
@@ -71,7 +69,7 @@ target_columns = [
 n_features = len(target_columns)
 
 # =============================
-# BACA & PREPROCESSING
+# BACA & PREPROCESSING (HANYA DATA REAL)
 # =============================
 def extract_date(f):
     return datetime.strptime(os.path.basename(f)[:8], "%d%m%Y")
@@ -102,14 +100,13 @@ def read_and_crop(filepath):
     df = df.iloc[N_DROP_FIRST:N_DROP_FIRST + N_TAKE].reset_index(drop=True)
     return df[['ts_date'] + target_columns]
 
-# Proses semua file
+# Proses semua file (100% real, tidak ada duplikasi)
 compressed_dfs = []
 for f in csv_files_sorted:
     df_raw = read_and_crop(f)
     if df_raw.empty:
         print(f"Skip {os.path.basename(f)} → data kurang")
         continue
-    # Kompresi
     chunks, ts_mid = [], []
     for i in range(COMPRESSED_POINTS_PER_DAY):
         s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
@@ -119,18 +116,9 @@ for f in csv_files_sorted:
     df_comp.insert(0, 'ts_date', ts_mid)
     compressed_dfs.append(df_comp)
 
-if not USE_REAL_DATA_MODE and len(compressed_dfs) >= 1:
-    template = compressed_dfs[0]
-    compressed_dfs = []
-    for i in range(N_DUPLICATES):
-        df_day = template.copy()
-        offset = timedelta(days=i)
-        df_day['ts_date'] = df_day['ts_date'].dt.normalize() + offset + (df_day['ts_date'] - df_day['ts_date'].dt.normalize())
-        compressed_dfs.append(df_day)
-
-print(f"\nTotal hari valid setelah preprocessing: {len(compressed_dfs)} hari")
+print(f"\nTotal hari valid (DATA REAL ASLI): {len(compressed_dfs)} hari")
 if len(compressed_dfs) < 4:
-    raise ValueError("Minimal 4 hari untuk training!")
+    raise ValueError("Minimal 4 hari data real untuk training!")
 
 # =============================
 # LABELING HEALTH STATUS
@@ -203,12 +191,10 @@ class ResidualBlock(nn.Module):
         self.norm1 = nn.BatchNorm1d(out_channels)
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(dropout)
-
         self.conv2 = CausalConv1d(out_channels, out_channels, kernel_size, dilation)
         self.norm2 = nn.BatchNorm1d(out_channels)
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(dropout)
-
         self.skip = nn.Conv1d(in_channels, out_channels, 1) if in_channels != out_channels else nn.Identity()
 
     def forward(self, x):
@@ -230,16 +216,11 @@ class TCNMultiTask(nn.Module):
         self.global_pool = nn.AdaptiveAvgPool1d(1)
 
         self.decoder = nn.Sequential(
-            nn.Linear(n_channels, n_channels),
-            nn.ReLU(),
-            nn.Dropout(dropout),
+            nn.Linear(n_channels, n_channels), nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(n_channels, n_features * FUTURE)
         )
-
         self.classifier = nn.Sequential(
-            nn.Linear(n_channels, 128),
-            nn.ReLU(),
-            nn.Dropout(dropout),
+            nn.Linear(n_channels, 128), nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(128, 3)
         )
 
@@ -247,14 +228,11 @@ class TCNMultiTask(nn.Module):
         x = x.transpose(1, 2)
         out = self.tcn(x)
         feature = self.global_pool(out).squeeze(-1)
-
-        sig_pred = self.decoder(feature)
-        sig_pred = sig_pred.view(-1, FUTURE, n_features)
-
+        sig_pred = self.decoder(feature).view(-1, FUTURE, n_features)
         stat_pred = self.classifier(feature)
         return sig_pred, stat_pred
 
-model = TCNMultiTask(n_features=n_features, n_channels=96, n_blocks=7, dropout=0.3).to(device)
+model = TCNMultiTask(n_features=n_features).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-5)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=30, verbose=True)
 
@@ -279,7 +257,7 @@ if checkpoint_files:
         scheduler.load_state_dict(cp['scheduler'])
         start_epoch = latest_epoch + 1
     else:
-        print(f"Training SUDAH SELESAI di epoch {latest_epoch}. Langsung ke prediksi & plot!")
+        print(f"Training SUDAH SELESAI di epoch {latest_epoch}. Langsung prediksi!")
 
 # =============================
 # LOG FUNCTION
@@ -289,19 +267,21 @@ def log_print(text):
     with open(LOG_FILE, 'a', encoding='utf-8') as f:
         f.write(text + '\n')
 
-log_print(f"\n{'='*60}")
-log_print(f"TCN TRAINING DIMULAI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-log_print(f"Total data training: {len(X_tensor)} sample | Epoch target: {N_EPOCHS} | Batch: {BATCH_SIZE}")
+log_print(f"\n{'='*80}")
+log_print(f"TCN TRAINING DATA REAL 100% - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+log_print(f"Total sample: {len(X_tensor)} | Epoch: {N_EPOCHS} | Batch: {BATCH_SIZE}")
 log_print(f"COMPRESSION_FACTOR: {COMPRESSION_FACTOR}× → {COMPRESSED_POINTS_PER_DAY} pts/hari")
-log_print(f"{'='*60}")
+log_print(f"{'='*80}")
 
 # =============================
-# TRAINING LOOP (PASTI SELALU PRINT DI TERMINAL)
+# TRAINING LOOP + MSE & ACCURACY PER EPOCH
 # =============================
 if start_epoch <= N_EPOCHS:
     model.train()
     for epoch in range(start_epoch, N_EPOCHS + 1):
-        total_loss = 0.0
+        total_loss = total_mse = 0.0
+        total_correct = total_samples = 0
+
         for x, y_sig, y_stat in dataloader:
             optimizer.zero_grad()
             sig_pred, stat_pred = model(x)
@@ -309,58 +289,50 @@ if start_epoch <= N_EPOCHS:
             loss_cls = criterion_ce(stat_pred, y_stat)
             loss = loss_sig + 3.5 * loss_cls
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
+
             total_loss += loss.item()
+            total_mse += loss_sig.item()
+            _, pred = torch.max(stat_pred, 1)
+            total_correct += (pred == y_stat).sum().item()
+            total_samples += y_stat.size(0)
 
         avg_loss = total_loss / len(dataloader)
+        avg_mse = total_mse / len(dataloader)
+        acc = 100.0 * total_correct / total_samples
         scheduler.step(avg_loss)
 
-        # SELALU PRINT SETIAP EPOCH (biar gak bingung)
-        print(f"Epoch {epoch:4d}/{N_EPOCHS} | Loss: {avg_loss:.6f} | LR: {optimizer.param_groups[0]['lr']:.2e}")
+        log_line = f"Epoch {epoch:4d}/{N_EPOCHS} | Loss: {avg_loss:.6f} | MSE(Forecast): {avg_mse:.7f} | Acc(Class): {acc:6.2f}% | LR: {optimizer.param_groups[0]['lr']:.2e}"
+        print(log_line)
+        log_print(log_line)
 
         if epoch % CHECKPOINT_INTERVAL == 0 or epoch == N_EPOCHS:
             cp_path = os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch_{epoch}.pth")
-            torch.save({
-                'epoch': epoch,
-                'model': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'scheduler': scheduler.state_dict(),
-                'loss': avg_loss
-            }, cp_path)
-            log_print(f"   → Checkpoint disimpan: {cp_path}")
+            torch.save({'epoch': epoch, 'model': model.state_dict(),
+                        'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(),
+                        'loss': avg_loss}, cp_path)
+            log_print(f"   → Checkpoint: {cp_path}")
 
     log_print("=== TRAINING SELESAI ===\n")
 else:
-    print("Training sudah selesai sebelumnya. Langsung load model terakhir untuk prediksi.")
-
-# Load model final kalau training sudah selesai
-if start_epoch > N_EPOCHS:
     model.load_state_dict(torch.load(latest_cp, map_location=device)['model'])
 
 # =============================
-# PREDIKSI HARI DEPAN
+# PREDIKSI & SIMPAN HASIL (sama seperti sebelumnya)
 # =============================
 model.eval()
 with torch.no_grad():
-    last_input = X_tensor[-1:].to(device)
-    pred_sig_scaled, pred_stat_logits = model(last_input)
-
+    pred_sig_scaled, pred_stat_logits = model(X_tensor[-1:].to(device))
     pred_sig_scaled = pred_sig_scaled.cpu().numpy()[0]
     pred_stat_prob = torch.softmax(pred_stat_logits, dim=1).cpu().numpy()[0]
-
     pred_status = int(np.argmax(pred_stat_prob))
     pred_confidence = float(pred_stat_prob[pred_status] * 100)
 
 pred_signal = scaler.inverse_transform(pred_sig_scaled.reshape(-1, n_features)).reshape(FUTURE, n_features)
-
 status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
 log_print(f"PREDIKSI HARI DEPAN: {status_map[pred_status]} ({pred_confidence:.2f}% confidence)")
-log_print(f"   → Detail: Sehat {pred_stat_prob[0]*100:6.2f}% | Pre-Anomali {pred_stat_prob[1]*100:6.2f}% | Near-Fail {pred_stat_prob[2]*100:6.2f}%")
 
-# =============================
-# SIMPAN MODEL & SCALER
-# =============================
 torch.save(model.state_dict(), "model_21param_TCN_final.pth")
 joblib.dump(scaler, "scaler_21param_TCN.pkl")
 log_print("Model & scaler disimpan")
@@ -471,19 +443,9 @@ result_df['confidence_percent'] = pred_confidence
 result_df.to_csv("prediksi_hari_depan_21param_TCN.csv", index=False)
 log_print("prediksi_hari_depan_21param_TCN.csv disimpan")
 
-# =============================
-# SELESAI
-# =============================
-log_print("\nSEMUA SELESAI 100% - VERSI TCN FINAL!")
-log_print("File yang dihasilkan:")
-log_print("   → model_21param_TCN_final.pth")
-log_print("   → scaler_21param_TCN.pkl")
-log_print("   → prediksi_hari_depan_21param_TCN.csv")
-log_print("   → plot_all_parameters_TCN.png + 3 gambar")
-log_print("   → training_log_21param_TCN.txt")
-log_print("   → semua checkpoint di folder: " + CHECKPOINT_DIR)
-
-print("\n" + "="*80)
-print("SELESAI TOTAL! Sekarang kamu tinggal ganti COMPRESSION_FACTOR = 10, 25, 50, 100")
-print("Semua plot & prediksi akan SELALU BENAR otomatis!")
-print("="*80)
+log_print("\nSEMUA SELESAI 100% - VERSI DATA REAL TANPA DUPLIKASI APAPUN!")
+print("\n" + "="*90)
+print("SELESAI TOTAL! Hanya pakai data asli, tidak ada duplikasi lagi.")
+print("Ganti COMPRESSION_FACTOR = 10 / 25 / 50 / 100 → tetap akurat otomatis")
+print("MSE + Accuracy tiap epoch sudah tercatat di training_log_21param_TCN.txt")
+print("="*90)
