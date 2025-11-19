@@ -30,7 +30,7 @@ CHECKPOINT_INTERVAL = 50
 CHECKPOINT_DIR = "checkpoints_21param_TCN"
 LOG_FILE = "training_log_21param_TCN.txt"
 
-COMPRESSION_FACTOR = 1             # ← INI SATU-SATUNYA YANG KAMU UBAH LAGI SELAMANYA
+COMPRESSION_FACTOR = 10             # ← INI SATU-SATUNYA YANG KAMU UBAH LAGI SELAMANYA
 # 100 = cepat, 50 = sedang, 25 = detail, 10 = super detail
 # ==================================================================
 
