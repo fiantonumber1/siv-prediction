@@ -1,6 +1,6 @@
 # =============================
-# DETEKSI ANOMALI HARIAN GLOBAL – ISOLATION FOREST (FINAL & CLEAN)
-# TANGGAL: HITAM + BACKGROUND PUTIH (100% KELIHATAN DI SEMUA WARNA!)
+# CLUSTERING HARIAN GLOBAL – VERSI FINAL TERAKHIR
+# TANGGAL: HITAM + BACKGROUND PUTIH (100% KELIHATAN!)
 # =============================
 
 import pandas as pd
@@ -10,7 +10,8 @@ import glob
 from datetime import datetime, time
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import IsolationForest
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
 import warnings
 warnings.filterwarnings('ignore')
@@ -20,19 +21,19 @@ warnings.filterwarnings('ignore')
 # ==================================================================
 COMPRESSION_FACTOR = 25
 N_TAKE = 150_000
-POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR  # 6000
+POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR
 
 START_TIME = time(6, 0, 0)
 END_TIME   = time(18, 16, 35)
 N_DROP_FIRST = 3600
 
-PLOT_DIR = "ANOMALI_HARIAN_GLOBAL"
-GLOBAL_PLOT = "GLOBAL_DAILY_ANOMALY_DETECTION.png"
-SUMMARY_CSV = "Ringkasan_Anomali_Harian.csv"
+PLOT_DIR = "CLUSTER_HARIAN_GLOBAL"
+GLOBAL_PLOT = "GLOBAL_DAILY_CLUSTER_WITH_CENTROIDS.png"
+SUMMARY_CSV = "Ringkasan_Cluster_Harian.csv"
 os.makedirs(PLOT_DIR, exist_ok=True)
 
 # ==================================================================
-# 21 PARAMETER YANG DIPAKAI
+# 21 PARAMETER
 # ==================================================================
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
@@ -45,24 +46,23 @@ target_columns = [
 folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 
 # ==================================================================
-# EKSTRAK TANGGAL DARI NAMA FILE
+# EKSTRAK TANGGAL
 # ==================================================================
 def extract_date(f):
     return datetime.strptime(os.path.basename(f)[:8], "%d%m%Y")
 
 csv_files = sorted(
-    [f for f in glob.glob(os.path.join(folder_path, "*.csv"))
+    [f for f in glob.glob(os.path.join(folder_path, "*.csv")) 
      if f.lower().endswith('.csv') and "hasil" not in os.path.basename(f).lower()],
     key=extract_date
 )
 
 # ==================================================================
-# BACA & KOMPRESI HARIAN (sama seperti sebelumnya)
+# BACA & KOMPRESI HARIAN
 # ==================================================================
 def read_and_compress_daily(filepath):
     df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
     df.columns = [col.strip() for col in df.columns]
-    
     df['ts_date'] = pd.to_datetime(df['ts_date'].astype(str).str.replace(',', '.'), 
                                    format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
     df = df.dropna(subset=['ts_date'])
@@ -100,7 +100,7 @@ daily_features = []
 valid_dates_str = []
 valid_dates_obj = []
 
-print("Membaca dan mengkompresi data harian...")
+print("Membaca dan mengkompresi data per hari...")
 for f in csv_files:
     vec, date_str = read_and_compress_daily(f)
     if vec is None:
@@ -115,86 +115,79 @@ daily_features = np.array(daily_features)
 print(f"\nTotal hari valid: {len(daily_features)} hari\n")
 
 # ==================================================================
-# STANDARDISASI + ISOLATION FOREST
+# STANDARDISASI + CLUSTERING
 # ==================================================================
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(daily_features)
 
-print("Menjalankan Isolation Forest...")
-iso = IsolationForest(
-    contamination=0.1,           # sesuaikan: 0.05 = ketat, 0.15 = longgar
-    random_state=42,
-    n_estimators=300,
-    max_samples='auto',
-    n_jobs=-1
-)
-anomaly_pred = iso.fit_predict(X_scaled)        # -1 = anomali, 1 = normal
-anomaly_score = iso.decision_function(X_scaled) # semakin negatif = semakin anomali
+print("Mencari jumlah cluster optimal...")
+best_k = 3
+best_score = -1
+for k in range(2, min(10, len(X_scaled))):
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(X_scaled)
+    score = silhouette_score(X_scaled, labels)
+    if score > best_score:
+        best_score = score
+        best_k = k
 
-# Konversi: 0 = normal, 1 = anomali
-anomaly_flags = (anomaly_pred == -1).astype(int)
-n_anomaly = anomaly_flags.sum()
-n_normal = len(anomaly_flags) - n_anomaly
+print(f"Optimal clusters: {best_k} (silhouette = {best_score:.3f})")
 
-print(f"Deteksi selesai → Normal: {n_normal} | Anomali: {n_anomaly} hari\n")
+kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+cluster_labels = kmeans.fit_predict(X_scaled)
+centroids_scaled = kmeans.cluster_centers_
 
 # ==================================================================
-# PCA 2D UNTUK VISUALISASI
+# PCA 2D
 # ==================================================================
 pca = PCA(n_components=2)
 X_pca = pca.fit_transform(X_scaled)
-
-# Centroid (rata-rata hari normal)
-normal_indices = np.where(anomaly_pred == 1)[0]
-if len(normal_indices) > 0:
-    centroid_normal_scaled = X_scaled[normal_indices].mean(axis=0).reshape(1, -1)
-    centroid_pca = pca.transform(centroid_normal_scaled)[0]
-else:
-    centroid_pca = np.array([0, 0])
+centroids_pca = pca.transform(centroids_scaled)
 
 # ==================================================================
-# PLOT GLOBAL – TANGGAL HITAM + BACKGROUND PUTIH (100% KELIHATAN)
+# PLOT GLOBAL – TANGGAL HITAM + BACKGROUND PUTIH (KELIHATAN 100%)
 # ==================================================================
 plt.figure(figsize=(19, 12))
+scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], 
+                     c=cluster_labels, cmap='tab10', s=280, 
+                     edgecolors='black', linewidth=1.5, alpha=0.92, zorder=5)
 
-# Warna & ukuran titik
-colors = ['#1f77b4' if x == 0 else '#d62728' for x in anomaly_flags]   # biru = normal, merah = anomali
-sizes  = [280 if x == 0 else 520 for x in anomaly_flags]
-alphas = [0.88 if x == 0 else 1.0 for x in anomaly_flags]
+# Centroid besar
+plt.scatter(centroids_pca[:, 0], centroids_pca[:, 1], 
+            c=range(best_k), cmap='tab10', s=1600, marker='*', 
+            edgecolors='black', linewidth=3, zorder=10)
 
-plt.scatter(X_pca[:, 0], X_pca[:, 1],
-            c=colors, s=sizes, edgecolors='black', linewidth=1.5,
-            alpha=alphas, zorder=5)
+for i, (cx, cy) in enumerate(centroids_pca):
+    plt.text(cx, cy, f'  C{i}', fontsize=18, fontweight='bold',
+             color='white', ha='left', va='center', zorder=11)
 
-# Centroid hari normal (bintang kuning besar)
-plt.scatter(centroid_pca[0], centroid_pca[1],
-            c='yellow', s=2000, marker='*', edgecolors='black', linewidth=3, zorder=10)
-plt.text(centroid_pca[0], centroid_pca[1], '  NORMAL', 
-         fontsize=20, fontweight='bold', color='white', ha='left', va='center', zorder=11)
-
-# Label tanggal (hitam + background putih/merah muda)
+# <<< PERUBAHAN UTAMA: TANGGAL WARNA HITAM + BACKGROUND PUTIH >>>
 for i, date_obj in enumerate(valid_dates_obj):
     nice_date = date_obj.strftime("%d/%m/%Y")
-    bg_color = "white" if anomaly_flags[i] == 0 else "#ffebee"
     plt.text(X_pca[i, 0], X_pca[i, 1], nice_date,
-             fontsize=10.5, ha='center', va='center', color='black', fontweight='bold',
+             fontsize=10.5, ha='center', va='center',
+             color='black',          # teks hitam
+             fontweight='bold',
              zorder=7,
-             bbox=dict(boxstyle="round,pad=0.32", facecolor=bg_color, edgecolor="none", alpha=0.92))
+             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="none", alpha=0.85))
+# <<< SELESAI >>>
 
-plt.title(f"DETEKSI ANOMALI HARIAN PLTS MENGGUNAKAN ISOLATION FOREST\n"
-          f"Total Hari: {len(valid_dates_obj)} → Normal: {n_normal} | Anomali: {n_anomaly} "
-          f"({n_anomaly/len(valid_dates_obj):.1%})\n"
-          f"Contamination = 0.1 | n_estimators = 300", 
-          fontsize=20, pad=40, color='darkblue')
+cluster_counts = np.bincount(cluster_labels, minlength=best_k)
+count_str = " | ".join([f"Cluster {i}: {c} hari" for i, c in enumerate(cluster_counts)])
+
+plt.title(f"CLUSTERING GLOBAL HARIAN: {len(valid_dates_obj)} Hari → {best_k} Pola Operasional\n"
+          f"{count_str}\nSilhouette Score: {best_score:.3f}", 
+          fontsize=19, pad=35)
 
 plt.xlabel(f"PCA Component 1 ({pca.explained_variance_ratio_[0]:.1%} variance)")
 plt.ylabel(f"PCA Component 2 ({pca.explained_variance_ratio_[1]:.1%} variance)")
+plt.colorbar(scatter, label='Cluster ID', shrink=0.8)
 plt.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(GLOBAL_PLOT, dpi=400, bbox_inches='tight', facecolor='white')
+plt.savefig(GLOBAL_PLOT, dpi=400, bbox_inches='tight')
 plt.close()
 
-print(f"Plot utama disimpan → {GLOBAL_PLOT}")
+print(f"Plot utama (tanggal HITAM + background putih) → {GLOBAL_PLOT}")
 
 # ==================================================================
 # RINGKASAN CSV
@@ -202,40 +195,35 @@ print(f"Plot utama disimpan → {GLOBAL_PLOT}")
 summary_df = pd.DataFrame({
     'Tanggal': [d.strftime("%d/%m/%Y") for d in valid_dates_obj],
     'Tanggal_Raw': valid_dates_str,
-    'Status': ['Normal' if x == 0 else 'ANOMALI' for x in anomaly_flags],
-    'Anomaly_Score': anomaly_score.round(6),
-    'Anomaly_Flag': anomaly_flags
-}).sort_values(by=['Anomaly_Flag', 'Tanggal'], ascending=[True, True])
+    'Cluster': cluster_labels
+}).sort_values(['Cluster', 'Tanggal'])
 
 summary_df.to_csv(SUMMARY_CSV, index=False)
-print(f"Ringkasan CSV → {SUMMARY_CSV}")
+print(f"Ringkasan → {SUMMARY_CSV}")
 
 # ==================================================================
-# WAVEFORM PER KELOMPOK (Normal vs Anomali)
+# WAVEFORM PER CLUSTER (tetap sama)
 # ==================================================================
-for status, label, color in [(0, "NORMAL", "#1f77b4"), (1, "ANOMALI", "#d6270d")]:
-    plt.figure(figsize=(16, 8))
-    indices = np.where(anomaly_flags == status)[0]
+for cluster_id in range(best_k):
+    plt.figure(figsize=(15, 7))
+    indices = np.where(cluster_labels == cluster_id)[0]
     for idx in indices:
         vec = daily_features[idx].reshape(POINTS_PER_DAY, len(target_columns))
-        plt.plot(vec[:, 17], alpha=0.6, linewidth=1.1, color=color)  # SIV_Output_Energy = index 17
-    plt.title(f"{label} — {len(indices)} hari — SIV_Output_Energy", fontsize=18, color=color)
-    plt.xlabel("Waktu (6000 titik terkompresi per hari)")
-    plt.ylabel("SIV_Output_Energy (kWh)")
+        plt.plot(vec[:, 17], alpha=0.6, linewidth=1.2)
+    plt.title(f"Cluster {cluster_id} — {len(indices)} hari — Output Energy")
+    plt.xlabel("Waktu (6000 titik terkompresi)")
+    plt.ylabel("SIV_Output_Energy")
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig(os.path.join(PLOT_DIR, f"{label}_OutputEnergy.png"), dpi=300)
+    plt.savefig(os.path.join(PLOT_DIR, f"Cluster_{cluster_id}_OutputEnergy.png"), dpi=250)
     plt.close()
-
-print(f"Waveform disimpan di folder → {PLOT_DIR}")
 
 # ==================================================================
 # SELESAI
 # ==================================================================
-print("\n" + "="*100)
-print("SELESAI 100% — DETEKSI ANOMALI DENGAN ISOLATION FOREST")
-print(f"Plot utama      : {GLOBAL_PLOT}")
-print(f"CSV ringkasan   : {SUMMARY_CSV}")
-print(f"Waveform        : folder '{PLOT_DIR}'")
-print(f"Total Anomali   : {n_anomaly} hari dari {len(valid_dates_obj)} hari")
-print("="*100)
+print("\n" + "="*95)
+print("SELESAI 100% — TANGGAL SEKARANG HITAM + BACKGROUND PUTIH → KELIHATAN DI SEMUA WARNA!")
+print(f"Plot utama : {GLOBAL_PLOT}")
+print(f"CSV ringkasan : {SUMMARY_CSV}")
+print(f"Waveform   : folder '{PLOT_DIR}'")
+print("="*95)
