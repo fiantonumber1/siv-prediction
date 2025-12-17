@@ -64,29 +64,8 @@ target_columns = [
     'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
     'SIV_U_Battery', 'SIV_U_DC_In', 'SIV_U_DC_Out', 'SIV_U_L1', 'SIV_U_L2', 'SIV_U_L3',
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
-    
+    'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive'
 ]
-
-# 18 parameter untuk prediksi
-# SIV_I_DC_In	1 = Open Input contactor	A
-# SIV_U_DC_In	DC input voltage	V
-# SIV_T_HS_Inv_1	Heat sink temperature 1 inverter	ºC
-# SIV_T_HS_Inv_2	Heat sink temperature 2 inverter	ºC
-# SIV_InConv_InEnergy	Input converter input energy	watt
-# SIV_Output_Energy	Output Energy of SIV (DC+AC)	watt
-# SIV_T_HS_InConv_1	Heat sink temperature 1 input converter	ºC
-# SIV_T_HS_InConv_2	Heat sink temperature 2 input converter	ºC
-# SIV_I_Battery	Battery charging current (+ = charging / - = discharging)	A
-# SIV_U_Battery	Battery voltage	V
-# SIV_U_DC_Out	DC output voltage	V
-# SIV_I_L1	AC output current phase 1 (RMS)	V
-# SIV_I_L2	AC output current phase 2 (RMS)	V
-# SIV_I_L3	AC output current phase 3 (RMS)	V
-# SIV_U_L1	AC output voltage phase 1 (RMS)	V
-# SIV_U_L2	AC output voltage phase 2 (RMS)	V
-# SIV_U_L3	AC output voltage phase 3 (RMS)	V
-# SIV_T_Container	Interior temperature	ºC
-
 n_features = len(target_columns)
 
 # =============================
@@ -155,19 +134,11 @@ if len(compressed_dfs) < 4:
 # LABELING HEALTH STATUS
 # =============================
 def label_health_status(df_day):
-    # Identifikasi 3 kolom fault utama untuk penentuan status kesehatan
-    # SIV_MajorBCFltPres	Status Fail Major BC Filter	- biner
-    # SIV_MajorInputConvFltPres	Status Fail Major Converter	- biner
-    # SIV_MajorInverterFltPres	Status Fail Major Inverter	- biner
-
+    # Identifikasi kolom fault utama
     fault_cols = [
         'SIV_MajorBCFltPres',
         'SIV_MajorInputConvFltPres',
-        'SIV_MajorInverterFltPres',
-        # 'PLC_OpenACOutputCont', bukan major fault
-        # 'PLC_OpenInputCont', bukan major fault
-        # 'SIV_DevIsAlive', bukan biner
-        # 'PLC_TCMSAlive', bukan biner
+        'SIV_MajorInvFltPres',
     ]
 
     for col in fault_cols:

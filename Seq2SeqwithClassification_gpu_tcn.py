@@ -64,8 +64,29 @@ target_columns = [
     'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
     'SIV_U_Battery', 'SIV_U_DC_In', 'SIV_U_DC_Out', 'SIV_U_L1', 'SIV_U_L2', 'SIV_U_L3',
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
-    'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive'
+    
 ]
+
+# 18 parameter untuk prediksi
+# SIV_I_DC_In	1 = Open Input contactor	A
+# SIV_U_DC_In	DC input voltage	V
+# SIV_T_HS_Inv_1	Heat sink temperature 1 inverter	ºC
+# SIV_T_HS_Inv_2	Heat sink temperature 2 inverter	ºC
+# SIV_InConv_InEnergy	Input converter input energy	watt
+# SIV_Output_Energy	Output Energy of SIV (DC+AC)	watt
+# SIV_T_HS_InConv_1	Heat sink temperature 1 input converter	ºC
+# SIV_T_HS_InConv_2	Heat sink temperature 2 input converter	ºC
+# SIV_I_Battery	Battery charging current (+ = charging / - = discharging)	A
+# SIV_U_Battery	Battery voltage	V
+# SIV_U_DC_Out	DC output voltage	V
+# SIV_I_L1	AC output current phase 1 (RMS)	V
+# SIV_I_L2	AC output current phase 2 (RMS)	V
+# SIV_I_L3	AC output current phase 3 (RMS)	V
+# SIV_U_L1	AC output voltage phase 1 (RMS)	V
+# SIV_U_L2	AC output voltage phase 2 (RMS)	V
+# SIV_U_L3	AC output voltage phase 3 (RMS)	V
+# SIV_T_Container	Interior temperature	ºC
+
 n_features = len(target_columns)
 
 # =============================
@@ -79,29 +100,38 @@ csv_files = [f for f in csv_files if f.lower().endswith('.csv') and "hasil" not 
 csv_files_sorted = sorted(csv_files, key=extract_date)
 
 def read_and_crop(filepath):
+    # Membaca file CSV dengan pemisah titik koma (;) dan encoding utf-8-sig.
     df = pd.read_csv(filepath, encoding='utf-8-sig', sep=';', low_memory=False, on_bad_lines='skip')
+    # Membersihkan nama kolom dan mengonversi tipe data.
     df.columns = [col.strip() for col in df.columns]
+    # Memperbaiki format timestamp (ts_date) dan mengubahnya menjadi tipe datetime.
     df['ts_date'] = pd.to_datetime(df['ts_date'].astype(str).str.replace(',', '.'), 
                                    format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
     df = df.dropna(subset=['ts_date'])
+    # Mengonversi 21 parameter target menjadi numerik (mengganti koma dengan titik sebagai desimal).
     for col in target_columns:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce')
         else:
             df[col] = np.nan
+    # Mengisi nilai hilang (missing values) pada 21 parameter menggunakan metode forward-fill diikuti backward-fill.
     df[target_columns] = df[target_columns].ffill().bfill()
 
     file_date = df['ts_date'].dt.date.iloc[0]
     start_dt = datetime.combine(file_date, START_TIME)
     end_dt = datetime.combine(file_date, END_TIME)
+    # Pemotongan waktu operasional: hanya data dari pukul 06:00:00 hingga 18:16:35 yang dipertahankan.
     df = df[(df['ts_date'] >= start_dt) & (df['ts_date'] <= end_dt)]
+    
     if len(df) < N_DROP_FIRST + N_TAKE * 0.8:
         return pd.DataFrame()
+    # Membuang 3.600 baris awal (fase transien) dan menggunakan 150.000 baris selanjutnya sebagai data harian.
     df = df.iloc[N_DROP_FIRST:N_DROP_FIRST + N_TAKE].reset_index(drop=True)
     return df[['ts_date'] + target_columns]
 
-# Proses semua file (100% real, tidak ada duplikasi)
+# Proses kompresi data harian
 compressed_dfs = []
+# Ambil data harian yang sudah dipotong
 for f in csv_files_sorted:
     df_raw = read_and_crop(f)
     if df_raw.empty:
@@ -110,6 +140,7 @@ for f in csv_files_sorted:
     chunks, ts_mid = [], []
     for i in range(COMPRESSED_POINTS_PER_DAY):
         s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
+        # Metode kompresi: rata-rata (mean) pada setiap segmen (chunk) sepanjang COMPRESSION_FACTOR titik.
         chunks.append(df_raw[target_columns].iloc[s:e].mean())
         ts_mid.append(df_raw['ts_date'].iloc[s + COMPRESSION_FACTOR//2])
     df_comp = pd.DataFrame(chunks, columns=target_columns)
@@ -124,14 +155,28 @@ if len(compressed_dfs) < 4:
 # LABELING HEALTH STATUS
 # =============================
 def label_health_status(df_day):
-    e = df_day['SIV_Output_Energy']
-    max_e = e.max()
-    if max_e == 0: return 0, "No energy"
-    drop = e.diff().dropna()
-    fail = ((drop < -0.5 * max_e) & (drop < 0)).sum()
-    if fail == 0: return 0, "Sehat"
-    elif fail == 1: return 1, "Pre-Anomali"
-    else: return 2, f"Near-Fail ({fail} drop)"
+    # Identifikasi 3 kolom fault utama untuk penentuan status kesehatan
+    # SIV_MajorBCFltPres	Status Fail Major BC Filter	- biner
+    # SIV_MajorInputConvFltPres	Status Fail Major Converter	- biner
+    # SIV_MajorInverterFltPres	Status Fail Major Inverter	- biner
+
+    fault_cols = [
+        'SIV_MajorBCFltPres',
+        'SIV_MajorInputConvFltPres',
+        'SIV_MajorInverterFltPres',
+        # 'PLC_OpenACOutputCont', bukan major fault
+        # 'PLC_OpenInputCont', bukan major fault
+        # 'SIV_DevIsAlive', bukan biner
+        # 'PLC_TCMSAlive', bukan biner
+    ]
+
+    for col in fault_cols:
+        # Deteksi keberadaan fault
+        if col in df_day.columns and (df_day[col] == 1).any():
+            #Pemberian label status
+            return 1, "Pre-Anomali"
+    # Pemberian label status
+    return 0, "Sehat"
 
 health_status = []
 for i, df in enumerate(compressed_dfs):
@@ -144,25 +189,36 @@ for i, df in enumerate(compressed_dfs):
 # =============================
 X_seq, y_signal, y_status = [], [], []
 for i in range(len(compressed_dfs) - 3):
+    # Gabungkan 3 hari berturut-turut sebagai input sequence
     seq = np.concatenate([df[target_columns].values for df in compressed_dfs[i:i+3]], axis=0)
     X_seq.append(seq)
+    # Hari ke-4 sebagai target prediksi
     y_signal.append(compressed_dfs[i+3][target_columns].values)
+    # Label status hari ke-4
     y_status.append(health_status[i+3])
 
+
+# Konversi tipe data
+# Konversi list ke array sekaligus ke float32 untuk efisiensi memori 
 X_seq = np.array(X_seq, dtype=np.float32)
 y_signal = np.array(y_signal, dtype=np.float32)
+# Konversi list ke array pada label status
 y_status = np.array(y_status, dtype=np.int64)
 
 # Normalisasi
+# Skala fitur ke rentang -0.1 hingga 1.1
 scaler = MinMaxScaler(feature_range=(-0.1, 1.1))
+# Fit dan transformasi data input dan target
 X_scaled = scaler.fit_transform(X_seq.reshape(-1, n_features)).reshape(X_seq.shape)
 y_scaled = scaler.transform(y_signal.reshape(-1, n_features)).reshape(y_signal.shape)
 
 # Tensor
+# Konversi data ke tensor PyTorch dan pindahkan ke device (CPU/GPU)
 X_tensor = torch.FloatTensor(X_scaled).to(device)
 y_sig_tensor = torch.FloatTensor(y_scaled).to(device)
 y_stat_tensor = torch.LongTensor(y_status).to(device)
 
+# DataLoader untuk batching dan shuffling data
 class SeqDataset(Dataset):
     def __init__(self, X, y_sig, y_stat):
         self.X, self.y_sig, self.y_stat = X, y_sig, y_stat
