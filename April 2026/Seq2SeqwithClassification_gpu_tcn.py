@@ -1,7 +1,8 @@
 # =============================
 # SEQ2SEQ + CLASSIFICATION 21 PARAMETER - FULL TCN VERSION
 # VERSI FINAL KHUSUS DATA REAL 100% (TIDAK ADA DUPLIKASI SAMA SEKALI)
-# + MSE FORECAST & ACCURACY KLASIFIKASI PER EPOCH (DISIMPAN DI LOG)
+# + COMPREHENSIVE METRICS (MSE, MAE, RMSE, MAPE, R², Precision, Recall, F1, ROC-AUC)
+# + EARLY STOPPING (patience=100, monitor val loss, save best model)
 # =============================
 
 import pandas as pd
@@ -11,6 +12,11 @@ import glob
 from datetime import datetime, time, timedelta
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import (
+    mean_absolute_error, mean_squared_error, r2_score,
+    precision_score, recall_score, f1_score, confusion_matrix,
+    classification_report, roc_auc_score
+)
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
@@ -307,6 +313,145 @@ best_epoch = 1
 best_model_path = os.path.join(CHECKPOINT_DIR, "best_model_TCN.pth")
 
 # =============================
+# METRIC CALCULATION FUNCTIONS
+# =============================
+def calculate_forecasting_metrics(y_true, y_pred):
+    """Calculate comprehensive forecasting metrics"""
+    # Flatten for per-timestep metrics
+    y_true_flat = y_true.flatten()
+    y_pred_flat = y_pred.flatten()
+    
+    # Basic metrics
+    mse = mean_squared_error(y_true_flat, y_pred_flat)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true_flat, y_pred_flat)
+    r2 = r2_score(y_true_flat, y_pred_flat)
+    
+    # MAPE (handle division by zero)
+    mask = y_true_flat != 0
+    if mask.sum() > 0:
+        mape = np.mean(np.abs((y_true_flat[mask] - y_pred_flat[mask]) / y_true_flat[mask])) * 100
+    else:
+        mape = np.nan
+    
+    # Per-parameter metrics (averaged across timesteps)
+    # Reshape to (samples, timesteps, features)
+    y_true_3d = y_true.reshape(-1, FUTURE, n_features)
+    y_pred_3d = y_pred.reshape(-1, FUTURE, n_features)
+    
+    # Per-feature MSE (averaged)
+    mse_per_feature = []
+    for i in range(n_features):
+        mse_f = mean_squared_error(y_true_3d[:, :, i].flatten(), y_pred_3d[:, :, i].flatten())
+        mse_per_feature.append(mse_f)
+    avg_mse_features = np.mean(mse_per_feature)
+    
+    return {
+        'MSE': mse,
+        'RMSE': rmse,
+        'MAE': mae,
+        'MAPE': mape,
+        'R2': r2,
+        'Avg_MSE_Per_Feature': avg_mse_features
+    }
+
+def calculate_classification_metrics(y_true, y_pred, y_prob=None, n_classes=3):
+    """Calculate comprehensive classification metrics"""
+    # Basic metrics
+    accuracy = np.sum(y_true == y_pred) / len(y_true)
+    
+    # Precision, Recall, F1 (per class and macro)
+    precision_macro = precision_score(y_true, y_pred, average='macro', zero_division=0)
+    recall_macro = recall_score(y_true, y_pred, average='macro', zero_division=0)
+    f1_macro = f1_score(y_true, y_pred, average='macro', zero_division=0)
+    
+    # Weighted averages
+    precision_weighted = precision_score(y_true, y_pred, average='weighted', zero_division=0)
+    recall_weighted = recall_score(y_true, y_pred, average='weighted', zero_division=0)
+    f1_weighted = f1_score(y_true, y_pred, average='weighted', zero_division=0)
+    
+    # Per-class metrics
+    precision_per_class = precision_score(y_true, y_pred, average=None, labels=list(range(n_classes)), zero_division=0)
+    recall_per_class = recall_score(y_true, y_pred, average=None, labels=list(range(n_classes)), zero_division=0)
+    f1_per_class = f1_score(y_true, y_pred, average=None, labels=list(range(n_classes)), zero_division=0)
+    
+    # Confusion Matrix
+    cm = confusion_matrix(y_true, y_pred, labels=list(range(n_classes)))
+    
+    # ROC-AUC (one-vs-rest) - only if probabilities are provided
+    roc_auc = None
+    if y_prob is not None and len(np.unique(y_true)) > 1:
+        try:
+            roc_auc = roc_auc_score(y_true, y_prob, multi_class='ovr', average='macro')
+        except:
+            pass
+    
+    return {
+        'Accuracy': accuracy,
+        'Precision_Macro': precision_macro,
+        'Recall_Macro': recall_macro,
+        'F1_Macro': f1_macro,
+        'Precision_Weighted': precision_weighted,
+        'Recall_Weighted': recall_weighted,
+        'F1_Weighted': f1_weighted,
+        'Precision_Per_Class': precision_per_class,
+        'Recall_Per_Class': recall_per_class,
+        'F1_Per_Class': f1_per_class,
+        'Confusion_Matrix': cm,
+        'ROC_AUC': roc_auc
+    }
+
+def format_metrics_report(metrics_dict, prefix="Val"):
+    """Format metrics for logging"""
+    lines = []
+    lines.append(f"\n{'='*80}")
+    lines.append(f"COMPREHENSIVE METRICS REPORT - {prefix}")
+    lines.append(f"{'='*80}")
+    
+    # Forecasting metrics
+    if 'MSE' in metrics_dict:
+        lines.append(f"\n📊 FORECASTING METRICS:")
+        lines.append(f"  MSE:  {metrics_dict['MSE']:.6f}")
+        lines.append(f"  RMSE: {metrics_dict['RMSE']:.6f}")
+        lines.append(f"  MAE:  {metrics_dict['MAE']:.6f}")
+        lines.append(f"  MAPE: {metrics_dict['MAPE']:.2f}%")
+        lines.append(f"  R²:   {metrics_dict['R2']:.6f}")
+        lines.append(f"  Avg MSE/Feature: {metrics_dict['Avg_MSE_Per_Feature']:.6f}")
+    
+    # Classification metrics
+    if 'Accuracy' in metrics_dict:
+        lines.append(f"\n🎯 CLASSIFICATION METRICS:")
+        lines.append(f"  Accuracy: {metrics_dict['Accuracy']*100:.2f}%")
+        lines.append(f"  Precision (Macro): {metrics_dict['Precision_Macro']:.4f}")
+        lines.append(f"  Recall (Macro):    {metrics_dict['Recall_Macro']:.4f}")
+        lines.append(f"  F1-Score (Macro):  {metrics_dict['F1_Macro']:.4f}")
+        lines.append(f"  Precision (Weighted): {metrics_dict['Precision_Weighted']:.4f}")
+        lines.append(f"  Recall (Weighted):    {metrics_dict['Recall_Weighted']:.4f}")
+        lines.append(f"  F1-Score (Weighted):  {metrics_dict['F1_Weighted']:.4f}")
+        
+        if metrics_dict['ROC_AUC'] is not None:
+            lines.append(f"  ROC-AUC (OvR): {metrics_dict['ROC_AUC']:.4f}")
+        
+        # Per-class metrics
+        lines.append(f"\n📈 PER-CLASS METRICS:")
+        status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
+        for i in range(len(metrics_dict['Precision_Per_Class'])):
+            lines.append(f"  Class {i} ({status_map.get(i, 'Unknown')}):")
+            lines.append(f"    Precision: {metrics_dict['Precision_Per_Class'][i]:.4f}")
+            lines.append(f"    Recall:    {metrics_dict['Recall_Per_Class'][i]:.4f}")
+            lines.append(f"    F1-Score:  {metrics_dict['F1_Per_Class'][i]:.4f}")
+        
+        # Confusion Matrix
+        lines.append(f"\n🔲 CONFUSION MATRIX:")
+        lines.append(f"  Predicted →")
+        for i, row in enumerate(metrics_dict['Confusion_Matrix']):
+            true_label = status_map.get(i, f"Class {i}")
+            lines.append(f"  Actual: {true_label:12s} | {row}")
+    
+    lines.append(f"{'='*80}\n")
+    return "\n".join(lines)
+
+# =============================
 # LOG FUNCTION
 # =============================
 def log_print(text):
@@ -330,6 +475,10 @@ if start_epoch <= N_EPOCHS:
         model.train()
         total_loss = total_mse = 0.0
         total_correct = total_samples = 0
+        train_y_true = []
+        train_y_pred = []
+        train_sig_true = []
+        train_sig_pred = []
 
         for x, y_sig, y_stat in dataloader:
             optimizer.zero_grad()
@@ -346,6 +495,12 @@ if start_epoch <= N_EPOCHS:
             _, pred = torch.max(stat_pred, 1)
             total_correct += (pred == y_stat).sum().item()
             total_samples += y_stat.size(0)
+            
+            # Collect for metrics
+            train_y_true.extend(y_stat.cpu().numpy())
+            train_y_pred.extend(pred.cpu().numpy())
+            train_sig_true.extend(y_sig.cpu().numpy())
+            train_sig_pred.extend(sig_pred.cpu().numpy())
 
         avg_loss = total_loss / len(dataloader)
         avg_mse = total_mse / len(dataloader)
@@ -355,6 +510,11 @@ if start_epoch <= N_EPOCHS:
         model.eval()
         val_loss = val_mse = 0.0
         val_correct = val_samples = 0
+        val_y_true = []
+        val_y_pred = []
+        val_y_prob = []
+        val_sig_true = []
+        val_sig_pred = []
 
         with torch.no_grad():
             for x, y_sig, y_stat in val_loader:
@@ -368,6 +528,13 @@ if start_epoch <= N_EPOCHS:
                 _, pred = torch.max(stat_pred, 1)
                 val_correct += (pred == y_stat).sum().item()
                 val_samples += y_stat.size(0)
+                
+                # Collect for metrics
+                val_y_true.extend(y_stat.cpu().numpy())
+                val_y_prob.extend(torch.softmax(stat_pred, dim=1).cpu().numpy())
+                val_y_pred.extend(pred.cpu().numpy())
+                val_sig_true.extend(y_sig.cpu().numpy())
+                val_sig_pred.extend(sig_pred.cpu().numpy())
 
         avg_val_loss = val_loss / len(val_loader)
         avg_val_mse = val_mse / len(val_loader)
@@ -380,6 +547,41 @@ if start_epoch <= N_EPOCHS:
         log_line = f"Epoch {epoch:4d}/{N_EPOCHS} | Train Loss: {avg_loss:.6f} | Val Loss: {avg_val_loss:.6f} | MSE(Forecast): {avg_mse:.7f} | Val MSE: {avg_val_mse:.7f} | Acc(Class): {acc:6.2f}% | Val Acc: {val_acc:6.2f}% | LR: {optimizer.param_groups[0]['lr']:.2e}"
         print(log_line)
         log_print(log_line)
+        
+        # Calculate and log comprehensive metrics every 10 epochs
+        if epoch % 10 == 0 or epoch == 1:
+            # Training metrics
+            train_arr = np.array(train_y_true)
+            train_pred_arr = np.array(train_y_pred)
+            train_cls_metrics = calculate_classification_metrics(
+                train_arr, train_pred_arr, n_classes=3
+            )
+            
+            train_sig_arr = np.array(train_sig_true)
+            train_sig_pred_arr = np.array(train_sig_pred)
+            train_forecast_metrics = calculate_forecasting_metrics(
+                train_sig_arr, train_sig_pred_arr
+            )
+            
+            log_print(format_metrics_report(train_forecast_metrics, "Train - Forecast"))
+            log_print(format_metrics_report(train_cls_metrics, "Train - Classification"))
+            
+            # Validation metrics
+            val_arr = np.array(val_y_true)
+            val_pred_arr = np.array(val_y_pred)
+            val_prob_arr = np.array(val_y_prob)
+            val_cls_metrics = calculate_classification_metrics(
+                val_arr, val_pred_arr, val_prob_arr, n_classes=3
+            )
+            
+            val_sig_arr = np.array(val_sig_true)
+            val_sig_pred_arr = np.array(val_sig_pred)
+            val_forecast_metrics = calculate_forecasting_metrics(
+                val_sig_arr, val_sig_pred_arr
+            )
+            
+            log_print(format_metrics_report(val_forecast_metrics, "Val - Forecast"))
+            log_print(format_metrics_report(val_cls_metrics, "Val - Classification"))
 
         # --- EARLY STOPPING CHECK ---
         if avg_val_loss < best_val_loss:
@@ -430,6 +632,65 @@ if start_epoch <= N_EPOCHS:
         model.load_state_dict(best_cp['model'])
     else:
         log_print("Warning: No best model found, using last checkpoint")
+    
+    # Final comprehensive evaluation on full dataset
+    log_print("\n" + "="*80)
+    log_print("FINAL COMPREHENSIVE EVALUATION ON FULL DATASET")
+    log_print("="*80)
+    
+    model.eval()
+    with torch.no_grad():
+        full_sig_pred, full_stat_pred = model(X_tensor)
+        full_stat_prob = torch.softmax(full_stat_pred, dim=1)
+        
+        # Convert to numpy
+        full_y_true_stat = y_stat_tensor.cpu().numpy()
+        full_y_pred_stat = full_stat_pred.argmax(dim=1).cpu().numpy()
+        full_y_prob_stat = full_stat_prob.cpu().numpy()
+        
+        full_y_true_sig = y_sig_tensor.cpu().numpy()
+        full_y_pred_sig = full_sig_pred.cpu().numpy()
+        
+        # Classification metrics
+        final_cls_metrics = calculate_classification_metrics(
+            full_y_true_stat, full_y_pred_stat, full_y_prob_stat, n_classes=3
+        )
+        
+        # Forecasting metrics
+        final_forecast_metrics = calculate_forecasting_metrics(
+            full_y_true_sig, full_y_pred_sig
+        )
+        
+        log_print(format_metrics_report(final_forecast_metrics, "FULL DATASET - Forecast"))
+        log_print(format_metrics_report(final_cls_metrics, "FULL DATASET - Classification"))
+        
+        # Save classification report to file
+        cls_report = classification_report(full_y_true_stat, full_y_pred_stat, 
+                                          target_names=['Sehat', 'Pre-Anomali', 'Near-Fail'],
+                                          zero_division=0)
+        report_file = os.path.join(folder_path, "classification_report_final.txt")
+        with open(report_file, 'w', encoding='utf-8') as f:
+            f.write("FINAL CLASSIFICATION REPORT\n")
+            f.write("="*80 + "\n")
+            f.write(f"Model: TCN Multi-Task (Best from epoch {best_epoch})\n")
+            f.write(f"Validation Loss: {best_val_loss:.6f}\n")
+            f.write("="*80 + "\n\n")
+            f.write(cls_report)
+            f.write("\n" + "="*80 + "\n")
+            f.write("CONFUSION MATRIX\n")
+            f.write("="*80 + "\n")
+            cm = final_cls_metrics['Confusion_Matrix']
+            status_map_text = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
+            f.write(f"{'Actual/Predicted':<20}")
+            for j in range(3):
+                f.write(f"{status_map_text[j]:<15}")
+            f.write("\n")
+            for i, row in enumerate(cm):
+                f.write(f"{status_map_text[i]:<20}")
+                for val in row:
+                    f.write(f"{val:<15}")
+                f.write("\n")
+        log_print(f"Classification report saved to: {report_file}")
 else:
     model.load_state_dict(torch.load(latest_cp, map_location=device)['model'])
 
