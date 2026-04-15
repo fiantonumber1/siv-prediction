@@ -500,7 +500,7 @@ if start_epoch <= N_EPOCHS:
             train_y_true.extend(y_stat.cpu().numpy())
             train_y_pred.extend(pred.cpu().numpy())
             train_sig_true.extend(y_sig.cpu().numpy())
-            train_sig_pred.extend(sig_pred.cpu().numpy())
+            train_sig_pred.extend(sig_pred.detach().cpu().numpy())
 
         avg_loss = total_loss / len(dataloader)
         avg_mse = total_mse / len(dataloader)
@@ -531,10 +531,10 @@ if start_epoch <= N_EPOCHS:
                 
                 # Collect for metrics
                 val_y_true.extend(y_stat.cpu().numpy())
-                val_y_prob.extend(torch.softmax(stat_pred, dim=1).cpu().numpy())
+                val_y_prob.extend(torch.softmax(stat_pred, dim=1).detach().cpu().numpy())
                 val_y_pred.extend(pred.cpu().numpy())
                 val_sig_true.extend(y_sig.cpu().numpy())
-                val_sig_pred.extend(sig_pred.cpu().numpy())
+                val_sig_pred.extend(sig_pred.detach().cpu().numpy())
 
         avg_val_loss = val_loss / len(val_loader)
         avg_val_mse = val_mse / len(val_loader)
