@@ -1,0 +1,10 @@
+# Dataset
+*.csv
+
+# Model weights (PyTorch)
+*.pth
+
+# Pickle files (scikit-learn, dll)
+*.pkl
+
+*.h5
