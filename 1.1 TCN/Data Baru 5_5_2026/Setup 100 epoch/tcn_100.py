@@ -1,5 +1,5 @@
 # =============================
-# SEQ2SEQ + CLASSIFICATION 21 PARAMETER - FULL TCN VERSION
+# SEQ2SEQ + CLASSIFICATION 24 PARAMETER (21 + 3 FAULT) - FULL TCN VERSION
 # VERSI FINAL KHUSUS DATA REAL 100% (TIDAK ADA DUPLIKASI SAMA SEKALI)
 # + MSE FORECAST & ACCURACY KLASIFIKASI PER EPOCH (DISIMPAN DI LOG)
 # =============================
@@ -26,8 +26,8 @@ from torch.utils.data import Dataset, DataLoader
 N_EPOCHS = 100
 BATCH_SIZE = 4
 CHECKPOINT_INTERVAL = 50
-CHECKPOINT_DIR = "checkpoints_21param_TCN"
-LOG_FILE = "training_log_21param_TCN.txt"
+CHECKPOINT_DIR = "checkpoints_24param_TCN"
+LOG_FILE = "training_log_24param_TCN.txt"
 
 COMPRESSION_FACTOR = 1             # SATU-SATUNYA ANGKA YANG PERNAH KAMU UBAH
 # 100 = cepat | 50 = sedang | 25 = detail | 10 = super detail
@@ -57,14 +57,16 @@ print(f"         → Input sequence  = {WINDOW} timesteps (3 hari)")
 print(f"         → Prediksi output = {FUTURE} timesteps (1 hari)\n")
 
 # =============================
-# 21 PARAMETER (FULL)
+# 24 PARAMETER (21 + 3 FAULT COLUMNS)
 # =============================
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
     'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
     'SIV_U_Battery', 'SIV_U_DC_In', 'SIV_U_DC_Out', 'SIV_U_L1', 'SIV_U_L2', 'SIV_U_L3',
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
-    'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive'
+    'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive',
+    # Fault columns (ditambahkan untuk labeling & forecasting)
+    'SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres',
 ]
 n_features = len(target_columns)
 
@@ -133,25 +135,29 @@ if len(compressed_dfs) < 4:
 # =============================
 # LABELING HEALTH STATUS
 # =============================
-def label_health_status(df_day):
-    # Identifikasi kolom fault utama
-    fault_cols = [
-        'SIV_MajorBCFltPres',
-        'SIV_MajorInputConvFltPres',
-        'SIV_MajorInvFltPres',
-    ]
+# Fault columns yang kini ada di compressed_dfs (sudah masuk target_columns)
+fault_cols = [
+    'SIV_MajorBCFltPres',
+    'SIV_MajorInputConvFltPres',
+    'SIV_MajorInvFltPres',
+]
 
+def label_health_status(df_day, day_idx, total_days):
+    # Aturan 1: hari terakhir (file CSV terakhir) selalu Near-Fail
+    if day_idx == total_days - 1:
+        return 2, "Near-Fail"
+    # Aturan 2: deteksi fault dari kolom yang kini ada di compressed_dfs
+    # (nilai mean > 0 berarti minimal 1 titik dalam hari itu ada fault)
     for col in fault_cols:
-        # Deteksi keberadaan fault
-        if col in df_day.columns and (df_day[col] == 1).any():
-            #Pemberian label status
+        if col in df_day.columns and (df_day[col] > 0).any():
             return 1, "Pre-Anomali"
-    # Pemberian label status
+    # Aturan 3: tidak ada fault → Sehat
     return 0, "Sehat"
 
 health_status = []
+total_days = len(compressed_dfs)
 for i, df in enumerate(compressed_dfs):
-    stat, txt = label_health_status(df)
+    stat, txt = label_health_status(df, i, total_days)
     health_status.append(stat)
     print(f"Day {i+1:2d} → {txt}")
 
@@ -209,7 +215,8 @@ class CausalConv1d(nn.Module):
         self.conv = nn.Conv1d(in_channels, out_channels, kernel_size,
                               padding=self.padding, dilation=dilation)
     def forward(self, x):
-        return self.conv(x)[:, :, :-self.padding]
+        out = self.conv(x)
+        return out[:, :, :-self.padding] if self.padding > 0 else out
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, dilation=1, dropout=0.3):
@@ -331,7 +338,6 @@ if start_epoch <= N_EPOCHS:
         scheduler.step(avg_loss)
 
         log_line = f"Epoch {epoch:4d}/{N_EPOCHS} | Loss: {avg_loss:.6f} | MSE(Forecast): {avg_mse:.7f} | Acc(Class): {acc:6.2f}% | LR: {optimizer.param_groups[0]['lr']:.2e}"
-        print(log_line)
         log_print(log_line)
 
         if epoch % CHECKPOINT_INTERVAL == 0 or epoch == N_EPOCHS:
@@ -360,8 +366,8 @@ pred_signal = scaler.inverse_transform(pred_sig_scaled.reshape(-1, n_features)).
 status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
 log_print(f"PREDIKSI HARI DEPAN: {status_map[pred_status]} ({pred_confidence:.2f}% confidence)")
 
-torch.save(model.state_dict(), "model_21param_TCN_final.pth")
-joblib.dump(scaler, "scaler_21param_TCN.pkl")
+torch.save(model.state_dict(), "model_24param_TCN_final.pth")
+joblib.dump(scaler, "scaler_24param_TCN.pkl")
 log_print("Model & scaler disimpan")
 
 # =============================
@@ -464,15 +470,17 @@ if len(compressed_dfs) >= 4:
 # SIMPAN HASIL PREDIKSI CSV
 # =============================
 result_df = pd.DataFrame(pred_signal, columns=target_columns)
-result_df.insert(0, 'ts_date', compressed_dfs[-1]['ts_date'].values[-FUTURE:])
+# Timestamp digeser +1 hari dari hari terakhir data (prediksi = hari depan)
+last_ts = pd.Series(compressed_dfs[-1]['ts_date'].values[-FUTURE:])
+result_df.insert(0, 'ts_date', last_ts + pd.Timedelta(days=1))
 result_df['health_status_pred'] = status_map[pred_status]
 result_df['confidence_percent'] = pred_confidence
-result_df.to_csv("prediksi_hari_depan_21param_TCN.csv", index=False)
-log_print("prediksi_hari_depan_21param_TCN.csv disimpan")
+result_df.to_csv("prediksi_hari_depan_24param_TCN.csv", index=False)
+log_print("prediksi_hari_depan_24param_TCN.csv disimpan")
 
 log_print("\nSEMUA SELESAI 100% - VERSI DATA REAL TANPA DUPLIKASI APAPUN!")
 print("\n" + "="*90)
 print("SELESAI TOTAL! Hanya pakai data asli, tidak ada duplikasi lagi.")
 print("Ganti COMPRESSION_FACTOR = 10 / 25 / 50 / 100 → tetap akurat otomatis")
-print("MSE + Accuracy tiap epoch sudah tercatat di training_log_21param_TCN.txt")
+print("MSE + Accuracy tiap epoch sudah tercatat di training_log_24param_TCN.txt")
 print("="*90)
