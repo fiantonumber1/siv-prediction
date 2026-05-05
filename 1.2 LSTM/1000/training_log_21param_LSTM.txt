@@ -1,0 +1,375 @@
+
+================================================================================
+LSTM TRAINING DATA REAL 100% - 2026-04-15 20:10:35
+Total sample: 6 | Epoch: 1000 | Batch: 4
+COMPRESSION_FACTOR: 1× → 150000 pts/hari
+================================================================================
+
+================================================================================
+LSTM TRAINING DATA REAL 100% - 2026-04-16 17:23:20
+Total sample: 6 | Epoch: 1000 | Batch: 2
+COMPRESSION_FACTOR: 1× → 150000 pts/hari
+cuDNN enabled: False
+================================================================================
+Epoch    1/1000 | Loss: 4.118463 | MSE(Forecast): 0.4206413 | Acc(Class):  66.67% | LR: 1.00e-03
+Epoch    2/1000 | Loss: 3.769846 | MSE(Forecast): 0.4142745 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    3/1000 | Loss: 2.836367 | MSE(Forecast): 0.4002830 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    4/1000 | Loss: 1.223020 | MSE(Forecast): 0.3699501 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    5/1000 | Loss: 0.536966 | MSE(Forecast): 0.3290667 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    6/1000 | Loss: 0.281208 | MSE(Forecast): 0.2618025 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    7/1000 | Loss: 0.210157 | MSE(Forecast): 0.2025613 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    8/1000 | Loss: 0.151928 | MSE(Forecast): 0.1481096 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch    9/1000 | Loss: 0.111659 | MSE(Forecast): 0.1111987 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   10/1000 | Loss: 0.081481 | MSE(Forecast): 0.0811727 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   11/1000 | Loss: 0.076267 | MSE(Forecast): 0.0762284 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   12/1000 | Loss: 0.067779 | MSE(Forecast): 0.0674723 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   13/1000 | Loss: 0.066908 | MSE(Forecast): 0.0668640 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   14/1000 | Loss: 0.054120 | MSE(Forecast): 0.0540905 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   15/1000 | Loss: 0.052246 | MSE(Forecast): 0.0522149 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   16/1000 | Loss: 0.049047 | MSE(Forecast): 0.0490247 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   17/1000 | Loss: 0.054903 | MSE(Forecast): 0.0548905 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   18/1000 | Loss: 0.045674 | MSE(Forecast): 0.0456635 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   19/1000 | Loss: 0.052359 | MSE(Forecast): 0.0523435 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   20/1000 | Loss: 0.061883 | MSE(Forecast): 0.0618724 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   21/1000 | Loss: 0.052265 | MSE(Forecast): 0.0522433 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   22/1000 | Loss: 0.053520 | MSE(Forecast): 0.0534835 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   23/1000 | Loss: 0.047777 | MSE(Forecast): 0.0477350 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   24/1000 | Loss: 0.055049 | MSE(Forecast): 0.0550091 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   25/1000 | Loss: 0.045232 | MSE(Forecast): 0.0452248 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   26/1000 | Loss: 0.041519 | MSE(Forecast): 0.0414750 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   27/1000 | Loss: 0.042908 | MSE(Forecast): 0.0428745 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   28/1000 | Loss: 0.039779 | MSE(Forecast): 0.0397584 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   29/1000 | Loss: 0.040150 | MSE(Forecast): 0.0401057 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   30/1000 | Loss: 0.049980 | MSE(Forecast): 0.0499413 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   31/1000 | Loss: 0.042696 | MSE(Forecast): 0.0426886 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   32/1000 | Loss: 0.043457 | MSE(Forecast): 0.0434513 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   33/1000 | Loss: 0.042142 | MSE(Forecast): 0.0421143 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   34/1000 | Loss: 0.040024 | MSE(Forecast): 0.0400068 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   35/1000 | Loss: 0.037727 | MSE(Forecast): 0.0377159 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   36/1000 | Loss: 0.039696 | MSE(Forecast): 0.0396740 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   37/1000 | Loss: 0.040918 | MSE(Forecast): 0.0408835 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   38/1000 | Loss: 0.042189 | MSE(Forecast): 0.0421783 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   39/1000 | Loss: 0.037013 | MSE(Forecast): 0.0370019 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   40/1000 | Loss: 0.037430 | MSE(Forecast): 0.0372948 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   41/1000 | Loss: 0.043146 | MSE(Forecast): 0.0430951 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   42/1000 | Loss: 0.038138 | MSE(Forecast): 0.0381317 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   43/1000 | Loss: 0.048858 | MSE(Forecast): 0.0488453 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   44/1000 | Loss: 0.041720 | MSE(Forecast): 0.0417048 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   45/1000 | Loss: 0.040404 | MSE(Forecast): 0.0404004 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   46/1000 | Loss: 0.047451 | MSE(Forecast): 0.0474330 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   47/1000 | Loss: 0.042573 | MSE(Forecast): 0.0425423 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   48/1000 | Loss: 0.035154 | MSE(Forecast): 0.0351255 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   49/1000 | Loss: 0.037189 | MSE(Forecast): 0.0371862 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   50/1000 | Loss: 0.039786 | MSE(Forecast): 0.0397601 | Acc(Class): 100.00% | LR: 1.00e-03
+ → Checkpoint: checkpoints_21param_LSTM\checkpoint_epoch_50.pth
+Epoch   51/1000 | Loss: 0.036655 | MSE(Forecast): 0.0366180 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   52/1000 | Loss: 0.040149 | MSE(Forecast): 0.0401082 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   53/1000 | Loss: 0.038229 | MSE(Forecast): 0.0382012 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   54/1000 | Loss: 0.042828 | MSE(Forecast): 0.0428228 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   55/1000 | Loss: 0.046297 | MSE(Forecast): 0.0462603 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   56/1000 | Loss: 0.039070 | MSE(Forecast): 0.0390287 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   57/1000 | Loss: 0.038972 | MSE(Forecast): 0.0389525 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   58/1000 | Loss: 0.041278 | MSE(Forecast): 0.0412562 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   59/1000 | Loss: 0.037044 | MSE(Forecast): 0.0370373 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   60/1000 | Loss: 0.040063 | MSE(Forecast): 0.0400406 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   61/1000 | Loss: 0.035366 | MSE(Forecast): 0.0353449 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   62/1000 | Loss: 0.037790 | MSE(Forecast): 0.0377652 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   63/1000 | Loss: 0.037952 | MSE(Forecast): 0.0379320 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   64/1000 | Loss: 0.033139 | MSE(Forecast): 0.0330855 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   65/1000 | Loss: 0.036536 | MSE(Forecast): 0.0365156 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   66/1000 | Loss: 0.031942 | MSE(Forecast): 0.0319182 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   67/1000 | Loss: 0.033833 | MSE(Forecast): 0.0338233 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   68/1000 | Loss: 0.038685 | MSE(Forecast): 0.0386736 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   69/1000 | Loss: 0.034870 | MSE(Forecast): 0.0348504 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   70/1000 | Loss: 0.036268 | MSE(Forecast): 0.0362639 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   71/1000 | Loss: 0.035690 | MSE(Forecast): 0.0356710 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   72/1000 | Loss: 0.035455 | MSE(Forecast): 0.0353861 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   73/1000 | Loss: 0.039046 | MSE(Forecast): 0.0390186 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   74/1000 | Loss: 0.036053 | MSE(Forecast): 0.0360406 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   75/1000 | Loss: 0.037847 | MSE(Forecast): 0.0378133 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   76/1000 | Loss: 0.038029 | MSE(Forecast): 0.0380092 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   77/1000 | Loss: 0.043335 | MSE(Forecast): 0.0433209 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   78/1000 | Loss: 0.041871 | MSE(Forecast): 0.0418603 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   79/1000 | Loss: 0.040901 | MSE(Forecast): 0.0408399 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   80/1000 | Loss: 0.040997 | MSE(Forecast): 0.0409755 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   81/1000 | Loss: 0.037332 | MSE(Forecast): 0.0373236 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   82/1000 | Loss: 0.056966 | MSE(Forecast): 0.0569467 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   83/1000 | Loss: 0.043356 | MSE(Forecast): 0.0433493 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   84/1000 | Loss: 0.044689 | MSE(Forecast): 0.0445895 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   85/1000 | Loss: 0.041446 | MSE(Forecast): 0.0414313 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   86/1000 | Loss: 0.046369 | MSE(Forecast): 0.0463376 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   87/1000 | Loss: 0.041617 | MSE(Forecast): 0.0415811 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   88/1000 | Loss: 0.040197 | MSE(Forecast): 0.0401914 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   89/1000 | Loss: 0.040142 | MSE(Forecast): 0.0401169 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   90/1000 | Loss: 0.035909 | MSE(Forecast): 0.0358586 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   91/1000 | Loss: 0.041993 | MSE(Forecast): 0.0419243 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   92/1000 | Loss: 0.041470 | MSE(Forecast): 0.0414541 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   93/1000 | Loss: 0.045397 | MSE(Forecast): 0.0453426 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   94/1000 | Loss: 0.042802 | MSE(Forecast): 0.0427979 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   95/1000 | Loss: 0.038158 | MSE(Forecast): 0.0380762 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   96/1000 | Loss: 0.046811 | MSE(Forecast): 0.0466492 | Acc(Class): 100.00% | LR: 1.00e-03
+Epoch   97/1000 | Loss: 0.046404 | MSE(Forecast): 0.0463965 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch   98/1000 | Loss: 0.042984 | MSE(Forecast): 0.0429685 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch   99/1000 | Loss: 0.035972 | MSE(Forecast): 0.0359663 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  100/1000 | Loss: 0.035271 | MSE(Forecast): 0.0352688 | Acc(Class): 100.00% | LR: 5.00e-04
+ → Checkpoint: checkpoints_21param_LSTM\checkpoint_epoch_100.pth
+Epoch  101/1000 | Loss: 0.030865 | MSE(Forecast): 0.0308483 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  102/1000 | Loss: 0.030924 | MSE(Forecast): 0.0309199 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  103/1000 | Loss: 0.035376 | MSE(Forecast): 0.0351178 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  104/1000 | Loss: 0.032438 | MSE(Forecast): 0.0323764 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  105/1000 | Loss: 0.029598 | MSE(Forecast): 0.0295532 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  106/1000 | Loss: 0.029666 | MSE(Forecast): 0.0296602 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  107/1000 | Loss: 0.038779 | MSE(Forecast): 0.0387628 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  108/1000 | Loss: 0.045692 | MSE(Forecast): 0.0456824 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  109/1000 | Loss: 0.035512 | MSE(Forecast): 0.0354884 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  110/1000 | Loss: 0.041964 | MSE(Forecast): 0.0419471 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  111/1000 | Loss: 0.031321 | MSE(Forecast): 0.0313079 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  112/1000 | Loss: 0.033093 | MSE(Forecast): 0.0330451 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  113/1000 | Loss: 0.033444 | MSE(Forecast): 0.0334350 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  114/1000 | Loss: 0.033591 | MSE(Forecast): 0.0335776 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  115/1000 | Loss: 0.036944 | MSE(Forecast): 0.0369263 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  116/1000 | Loss: 0.033720 | MSE(Forecast): 0.0336888 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  117/1000 | Loss: 0.029957 | MSE(Forecast): 0.0299482 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  118/1000 | Loss: 0.043074 | MSE(Forecast): 0.0430178 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  119/1000 | Loss: 0.034065 | MSE(Forecast): 0.0339957 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  120/1000 | Loss: 0.038041 | MSE(Forecast): 0.0380212 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  121/1000 | Loss: 0.032472 | MSE(Forecast): 0.0324689 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  122/1000 | Loss: 0.029350 | MSE(Forecast): 0.0293411 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  123/1000 | Loss: 0.031430 | MSE(Forecast): 0.0314010 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  124/1000 | Loss: 0.029346 | MSE(Forecast): 0.0293392 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  125/1000 | Loss: 0.030253 | MSE(Forecast): 0.0302381 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  126/1000 | Loss: 0.030992 | MSE(Forecast): 0.0309852 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  127/1000 | Loss: 0.033354 | MSE(Forecast): 0.0333222 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  128/1000 | Loss: 0.031849 | MSE(Forecast): 0.0318389 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  129/1000 | Loss: 0.032710 | MSE(Forecast): 0.0326867 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  130/1000 | Loss: 0.035871 | MSE(Forecast): 0.0358658 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  131/1000 | Loss: 0.032671 | MSE(Forecast): 0.0326035 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  132/1000 | Loss: 0.033438 | MSE(Forecast): 0.0334327 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  133/1000 | Loss: 0.030581 | MSE(Forecast): 0.0305661 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  134/1000 | Loss: 0.031599 | MSE(Forecast): 0.0315891 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  135/1000 | Loss: 0.031056 | MSE(Forecast): 0.0310450 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  136/1000 | Loss: 0.038345 | MSE(Forecast): 0.0383146 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  137/1000 | Loss: 0.032073 | MSE(Forecast): 0.0320404 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  138/1000 | Loss: 0.034183 | MSE(Forecast): 0.0341641 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  139/1000 | Loss: 0.038435 | MSE(Forecast): 0.0384188 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  140/1000 | Loss: 0.032688 | MSE(Forecast): 0.0326689 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  141/1000 | Loss: 0.039843 | MSE(Forecast): 0.0398280 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  142/1000 | Loss: 0.037624 | MSE(Forecast): 0.0376080 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  143/1000 | Loss: 0.039680 | MSE(Forecast): 0.0396751 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  144/1000 | Loss: 0.036184 | MSE(Forecast): 0.0361605 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  145/1000 | Loss: 0.038437 | MSE(Forecast): 0.0384150 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  146/1000 | Loss: 0.036677 | MSE(Forecast): 0.0366648 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  147/1000 | Loss: 0.035542 | MSE(Forecast): 0.0355378 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  148/1000 | Loss: 0.031266 | MSE(Forecast): 0.0312421 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  149/1000 | Loss: 0.034997 | MSE(Forecast): 0.0349906 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  150/1000 | Loss: 0.028101 | MSE(Forecast): 0.0280649 | Acc(Class): 100.00% | LR: 5.00e-04
+ → Checkpoint: checkpoints_21param_LSTM\checkpoint_epoch_150.pth
+Epoch  151/1000 | Loss: 0.035964 | MSE(Forecast): 0.0358794 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  152/1000 | Loss: 0.031097 | MSE(Forecast): 0.0310633 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  153/1000 | Loss: 0.035329 | MSE(Forecast): 0.0353125 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  154/1000 | Loss: 0.035123 | MSE(Forecast): 0.0351172 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  155/1000 | Loss: 0.031945 | MSE(Forecast): 0.0318772 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  156/1000 | Loss: 0.034899 | MSE(Forecast): 0.0348864 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  157/1000 | Loss: 0.029883 | MSE(Forecast): 0.0298693 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  158/1000 | Loss: 0.038332 | MSE(Forecast): 0.0383197 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  159/1000 | Loss: 0.029624 | MSE(Forecast): 0.0296097 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  160/1000 | Loss: 0.036468 | MSE(Forecast): 0.0364519 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  161/1000 | Loss: 0.041444 | MSE(Forecast): 0.0413973 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  162/1000 | Loss: 0.034166 | MSE(Forecast): 0.0341479 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  163/1000 | Loss: 0.034218 | MSE(Forecast): 0.0341857 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  164/1000 | Loss: 0.039030 | MSE(Forecast): 0.0389842 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  165/1000 | Loss: 0.036146 | MSE(Forecast): 0.0361043 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  166/1000 | Loss: 0.036105 | MSE(Forecast): 0.0360679 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  167/1000 | Loss: 0.033083 | MSE(Forecast): 0.0330677 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  168/1000 | Loss: 0.031500 | MSE(Forecast): 0.0314952 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  169/1000 | Loss: 0.037005 | MSE(Forecast): 0.0369962 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  170/1000 | Loss: 0.032402 | MSE(Forecast): 0.0323724 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  171/1000 | Loss: 0.032102 | MSE(Forecast): 0.0320394 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  172/1000 | Loss: 0.032497 | MSE(Forecast): 0.0324805 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  173/1000 | Loss: 0.034011 | MSE(Forecast): 0.0340046 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  174/1000 | Loss: 0.039902 | MSE(Forecast): 0.0398830 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  175/1000 | Loss: 0.035572 | MSE(Forecast): 0.0355268 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  176/1000 | Loss: 0.031819 | MSE(Forecast): 0.0318024 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  177/1000 | Loss: 0.032473 | MSE(Forecast): 0.0324450 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  178/1000 | Loss: 0.031359 | MSE(Forecast): 0.0313502 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  179/1000 | Loss: 0.029599 | MSE(Forecast): 0.0295929 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  180/1000 | Loss: 0.030021 | MSE(Forecast): 0.0300089 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  181/1000 | Loss: 0.026717 | MSE(Forecast): 0.0267008 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  182/1000 | Loss: 0.032938 | MSE(Forecast): 0.0329292 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  183/1000 | Loss: 0.031414 | MSE(Forecast): 0.0314023 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  184/1000 | Loss: 0.027456 | MSE(Forecast): 0.0274304 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  185/1000 | Loss: 0.032696 | MSE(Forecast): 0.0326737 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  186/1000 | Loss: 0.032949 | MSE(Forecast): 0.0329415 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  187/1000 | Loss: 0.032602 | MSE(Forecast): 0.0325869 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  188/1000 | Loss: 0.036540 | MSE(Forecast): 0.0365208 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  189/1000 | Loss: 0.030601 | MSE(Forecast): 0.0305774 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  190/1000 | Loss: 0.030646 | MSE(Forecast): 0.0306394 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  191/1000 | Loss: 0.034721 | MSE(Forecast): 0.0347078 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  192/1000 | Loss: 0.027912 | MSE(Forecast): 0.0279058 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  193/1000 | Loss: 0.038586 | MSE(Forecast): 0.0385659 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  194/1000 | Loss: 0.029152 | MSE(Forecast): 0.0291230 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  195/1000 | Loss: 0.029052 | MSE(Forecast): 0.0290450 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  196/1000 | Loss: 0.031133 | MSE(Forecast): 0.0311063 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  197/1000 | Loss: 0.029837 | MSE(Forecast): 0.0298191 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  198/1000 | Loss: 0.027848 | MSE(Forecast): 0.0278390 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  199/1000 | Loss: 0.030654 | MSE(Forecast): 0.0306462 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  200/1000 | Loss: 0.032744 | MSE(Forecast): 0.0327302 | Acc(Class): 100.00% | LR: 5.00e-04
+ → Checkpoint: checkpoints_21param_LSTM\checkpoint_epoch_200.pth
+Epoch  201/1000 | Loss: 0.029671 | MSE(Forecast): 0.0296365 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  202/1000 | Loss: 0.030342 | MSE(Forecast): 0.0303396 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  203/1000 | Loss: 0.028725 | MSE(Forecast): 0.0286967 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  204/1000 | Loss: 0.033705 | MSE(Forecast): 0.0336809 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  205/1000 | Loss: 0.032994 | MSE(Forecast): 0.0329905 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  206/1000 | Loss: 0.036605 | MSE(Forecast): 0.0365965 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  207/1000 | Loss: 0.032065 | MSE(Forecast): 0.0320634 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  208/1000 | Loss: 0.027850 | MSE(Forecast): 0.0278431 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  209/1000 | Loss: 0.028935 | MSE(Forecast): 0.0289280 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  210/1000 | Loss: 0.031032 | MSE(Forecast): 0.0310225 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  211/1000 | Loss: 0.034412 | MSE(Forecast): 0.0343988 | Acc(Class): 100.00% | LR: 5.00e-04
+Epoch  212/1000 | Loss: 0.028032 | MSE(Forecast): 0.0280227 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  213/1000 | Loss: 0.035991 | MSE(Forecast): 0.0359812 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  214/1000 | Loss: 0.025897 | MSE(Forecast): 0.0258774 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  215/1000 | Loss: 0.036095 | MSE(Forecast): 0.0360697 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  216/1000 | Loss: 0.030679 | MSE(Forecast): 0.0306421 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  217/1000 | Loss: 0.028271 | MSE(Forecast): 0.0282430 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  218/1000 | Loss: 0.030055 | MSE(Forecast): 0.0300466 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  219/1000 | Loss: 0.029410 | MSE(Forecast): 0.0293960 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  220/1000 | Loss: 0.025448 | MSE(Forecast): 0.0254391 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  221/1000 | Loss: 0.031185 | MSE(Forecast): 0.0311675 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  222/1000 | Loss: 0.030540 | MSE(Forecast): 0.0305028 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  223/1000 | Loss: 0.030911 | MSE(Forecast): 0.0309080 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  224/1000 | Loss: 0.030585 | MSE(Forecast): 0.0305643 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  225/1000 | Loss: 0.030932 | MSE(Forecast): 0.0309281 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  226/1000 | Loss: 0.028950 | MSE(Forecast): 0.0289441 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  227/1000 | Loss: 0.029035 | MSE(Forecast): 0.0290295 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  228/1000 | Loss: 0.030782 | MSE(Forecast): 0.0307595 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  229/1000 | Loss: 0.034039 | MSE(Forecast): 0.0340352 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  230/1000 | Loss: 0.035442 | MSE(Forecast): 0.0354288 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  231/1000 | Loss: 0.029440 | MSE(Forecast): 0.0294376 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  232/1000 | Loss: 0.033765 | MSE(Forecast): 0.0337385 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  233/1000 | Loss: 0.028349 | MSE(Forecast): 0.0283425 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  234/1000 | Loss: 0.034241 | MSE(Forecast): 0.0342383 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  235/1000 | Loss: 0.035288 | MSE(Forecast): 0.0352841 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  236/1000 | Loss: 0.033394 | MSE(Forecast): 0.0333850 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  237/1000 | Loss: 0.033825 | MSE(Forecast): 0.0338177 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  238/1000 | Loss: 0.026722 | MSE(Forecast): 0.0266598 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  239/1000 | Loss: 0.037953 | MSE(Forecast): 0.0379382 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  240/1000 | Loss: 0.027617 | MSE(Forecast): 0.0276142 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  241/1000 | Loss: 0.034867 | MSE(Forecast): 0.0348585 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  242/1000 | Loss: 0.030164 | MSE(Forecast): 0.0301472 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  243/1000 | Loss: 0.029128 | MSE(Forecast): 0.0291098 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  244/1000 | Loss: 0.027117 | MSE(Forecast): 0.0270821 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  245/1000 | Loss: 0.028323 | MSE(Forecast): 0.0283189 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  246/1000 | Loss: 0.037317 | MSE(Forecast): 0.0372997 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  247/1000 | Loss: 0.032661 | MSE(Forecast): 0.0326545 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  248/1000 | Loss: 0.033301 | MSE(Forecast): 0.0332921 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  249/1000 | Loss: 0.029741 | MSE(Forecast): 0.0297374 | Acc(Class): 100.00% | LR: 2.50e-04
+Epoch  250/1000 | Loss: 0.034111 | MSE(Forecast): 0.0341007 | Acc(Class): 100.00% | LR: 2.50e-04
+ → Checkpoint: checkpoints_21param_LSTM\checkpoint_epoch_250.pth
+Epoch  251/1000 | Loss: 0.036634 | MSE(Forecast): 0.0366194 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  252/1000 | Loss: 0.033192 | MSE(Forecast): 0.0331797 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  253/1000 | Loss: 0.029633 | MSE(Forecast): 0.0296277 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  254/1000 | Loss: 0.032722 | MSE(Forecast): 0.0327043 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  255/1000 | Loss: 0.042328 | MSE(Forecast): 0.0423227 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  256/1000 | Loss: 0.033908 | MSE(Forecast): 0.0338989 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  257/1000 | Loss: 0.033262 | MSE(Forecast): 0.0332509 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  258/1000 | Loss: 0.031826 | MSE(Forecast): 0.0318025 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  259/1000 | Loss: 0.032475 | MSE(Forecast): 0.0324567 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  260/1000 | Loss: 0.029562 | MSE(Forecast): 0.0295590 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  261/1000 | Loss: 0.033523 | MSE(Forecast): 0.0335207 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  262/1000 | Loss: 0.029978 | MSE(Forecast): 0.0299656 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  263/1000 | Loss: 0.028981 | MSE(Forecast): 0.0289591 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  264/1000 | Loss: 0.028625 | MSE(Forecast): 0.0286221 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  265/1000 | Loss: 0.036790 | MSE(Forecast): 0.0367841 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  266/1000 | Loss: 0.032207 | MSE(Forecast): 0.0322031 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  267/1000 | Loss: 0.035557 | MSE(Forecast): 0.0355449 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  268/1000 | Loss: 0.028520 | MSE(Forecast): 0.0285167 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  269/1000 | Loss: 0.030976 | MSE(Forecast): 0.0309732 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  270/1000 | Loss: 0.029097 | MSE(Forecast): 0.0290956 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  271/1000 | Loss: 0.029489 | MSE(Forecast): 0.0294793 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  272/1000 | Loss: 0.027089 | MSE(Forecast): 0.0270795 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  273/1000 | Loss: 0.027947 | MSE(Forecast): 0.0279417 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  274/1000 | Loss: 0.025667 | MSE(Forecast): 0.0256504 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  275/1000 | Loss: 0.030868 | MSE(Forecast): 0.0307956 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  276/1000 | Loss: 0.032061 | MSE(Forecast): 0.0320506 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  277/1000 | Loss: 0.031703 | MSE(Forecast): 0.0316959 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  278/1000 | Loss: 0.032718 | MSE(Forecast): 0.0326974 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  279/1000 | Loss: 0.033760 | MSE(Forecast): 0.0337574 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  280/1000 | Loss: 0.027888 | MSE(Forecast): 0.0278736 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  281/1000 | Loss: 0.032238 | MSE(Forecast): 0.0322319 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  282/1000 | Loss: 0.029511 | MSE(Forecast): 0.0295050 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  283/1000 | Loss: 0.029001 | MSE(Forecast): 0.0289832 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  284/1000 | Loss: 0.028729 | MSE(Forecast): 0.0287259 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  285/1000 | Loss: 0.032882 | MSE(Forecast): 0.0328786 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  286/1000 | Loss: 0.039808 | MSE(Forecast): 0.0398040 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  287/1000 | Loss: 0.025570 | MSE(Forecast): 0.0255594 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  288/1000 | Loss: 0.029917 | MSE(Forecast): 0.0299106 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  289/1000 | Loss: 0.031580 | MSE(Forecast): 0.0315151 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  290/1000 | Loss: 0.030490 | MSE(Forecast): 0.0304777 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  291/1000 | Loss: 0.032304 | MSE(Forecast): 0.0322946 | Acc(Class): 100.00% | LR: 6.25e-05
+Epoch  292/1000 | Loss: 0.032911 | MSE(Forecast): 0.0329041 | Acc(Class): 100.00% | LR: 6.25e-05
+
+================================================================================
+LSTM TRAINING DATA REAL 100% - 2026-04-27 15:07:06
+Total sample: 6 | Epoch: 1000 | Batch: 2
+COMPRESSION_FACTOR: 1× → 150000 pts/hari
+cuDNN enabled: False
+================================================================================
+Epoch  251/1000 | Loss: 0.031587 | MSE(Forecast): 0.0315846 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  252/1000 | Loss: 0.026727 | MSE(Forecast): 0.0267211 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  253/1000 | Loss: 0.029661 | MSE(Forecast): 0.0296452 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  254/1000 | Loss: 0.035272 | MSE(Forecast): 0.0352702 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  255/1000 | Loss: 0.029819 | MSE(Forecast): 0.0298078 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  256/1000 | Loss: 0.029718 | MSE(Forecast): 0.0296824 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  257/1000 | Loss: 0.029094 | MSE(Forecast): 0.0290823 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  258/1000 | Loss: 0.028952 | MSE(Forecast): 0.0289432 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  259/1000 | Loss: 0.028429 | MSE(Forecast): 0.0284275 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  260/1000 | Loss: 0.032669 | MSE(Forecast): 0.0326500 | Acc(Class): 100.00% | LR: 1.25e-04
+
+================================================================================
+LSTM TRAINING DATA REAL 100% - 2026-04-29 10:16:32
+Total sample: 6 | Epoch: 1000 | Batch: 2
+COMPRESSION_FACTOR: 1× → 150000 pts/hari
+cuDNN enabled: False
+================================================================================
+Epoch  251/1000 | Loss: 0.029930 | MSE(Forecast): 0.0299266 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  252/1000 | Loss: 0.033125 | MSE(Forecast): 0.0331164 | Acc(Class): 100.00% | LR: 1.25e-04
+
+================================================================================
+LSTM TRAINING DATA REAL 100% - 2026-04-29 16:10:12
+Total sample: 6 | Epoch: 1000 | Batch: 2
+COMPRESSION_FACTOR: 1× → 150000 pts/hari
+cuDNN enabled: False
+================================================================================
+Epoch  251/1000 | Loss: 0.034256 | MSE(Forecast): 0.0342472 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  252/1000 | Loss: 0.025129 | MSE(Forecast): 0.0250986 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  253/1000 | Loss: 0.034832 | MSE(Forecast): 0.0348225 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  254/1000 | Loss: 0.035158 | MSE(Forecast): 0.0351530 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  255/1000 | Loss: 0.034787 | MSE(Forecast): 0.0347819 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  256/1000 | Loss: 0.027858 | MSE(Forecast): 0.0278341 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  257/1000 | Loss: 0.027924 | MSE(Forecast): 0.0279203 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  258/1000 | Loss: 0.032920 | MSE(Forecast): 0.0329181 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  259/1000 | Loss: 0.038094 | MSE(Forecast): 0.0380801 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  260/1000 | Loss: 0.031832 | MSE(Forecast): 0.0317394 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  261/1000 | Loss: 0.029702 | MSE(Forecast): 0.0296998 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  262/1000 | Loss: 0.031410 | MSE(Forecast): 0.0313891 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  263/1000 | Loss: 0.033341 | MSE(Forecast): 0.0333396 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  264/1000 | Loss: 0.027470 | MSE(Forecast): 0.0274650 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  265/1000 | Loss: 0.035375 | MSE(Forecast): 0.0353701 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  266/1000 | Loss: 0.033042 | MSE(Forecast): 0.0330212 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  267/1000 | Loss: 0.029749 | MSE(Forecast): 0.0297345 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  268/1000 | Loss: 0.030854 | MSE(Forecast): 0.0308397 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  269/1000 | Loss: 0.030074 | MSE(Forecast): 0.0300449 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  270/1000 | Loss: 0.030752 | MSE(Forecast): 0.0307501 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  271/1000 | Loss: 0.029218 | MSE(Forecast): 0.0291930 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  272/1000 | Loss: 0.031954 | MSE(Forecast): 0.0319443 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  273/1000 | Loss: 0.035842 | MSE(Forecast): 0.0358240 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  274/1000 | Loss: 0.031613 | MSE(Forecast): 0.0316010 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  275/1000 | Loss: 0.031162 | MSE(Forecast): 0.0311208 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  276/1000 | Loss: 0.027404 | MSE(Forecast): 0.0273981 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  277/1000 | Loss: 0.025028 | MSE(Forecast): 0.0249971 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  278/1000 | Loss: 0.033350 | MSE(Forecast): 0.0333038 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  279/1000 | Loss: 0.031147 | MSE(Forecast): 0.0311343 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  280/1000 | Loss: 0.030287 | MSE(Forecast): 0.0302589 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  281/1000 | Loss: 0.028731 | MSE(Forecast): 0.0287242 | Acc(Class): 100.00% | LR: 1.25e-04
+Epoch  282/1000 | Loss: 0.033634 | MSE(Forecast): 0.0336325 | Acc(Class): 100.00% | LR: 1.25e-04
