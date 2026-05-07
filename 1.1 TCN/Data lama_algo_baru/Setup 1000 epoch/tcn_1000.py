@@ -1,7 +1,8 @@
 # =============================
-# SEQ2SEQ + CLASSIFICATION 24 PARAMETER (21 + 3 FAULT) - FULL TCN VERSION
+# SEQ2SEQ + CLASSIFICATION 21 PARAMETER - FULL TCN VERSION
 # VERSI FINAL KHUSUS DATA REAL 100% (TIDAK ADA DUPLIKASI SAMA SEKALI)
 # + MSE FORECAST & ACCURACY KLASIFIKASI PER EPOCH (DISIMPAN DI LOG)
+# Fault columns (3 kolom binary) dibaca terpisah HANYA untuk labeling
 # =============================
 
 import pandas as pd
@@ -57,7 +58,7 @@ print(f"         → Input sequence  = {WINDOW} timesteps (3 hari)")
 print(f"         → Prediksi output = {FUTURE} timesteps (1 hari)\n")
 
 # =============================
-# 24 PARAMETER (21 + 3 FAULT COLUMNS)
+# 21 PARAMETER (fault columns HANYA untuk labeling, BUKAN forecasting)
 # =============================
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
@@ -65,10 +66,11 @@ target_columns = [
     'SIV_U_Battery', 'SIV_U_DC_In', 'SIV_U_DC_Out', 'SIV_U_L1', 'SIV_U_L2', 'SIV_U_L3',
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
     'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive',
-    # Fault columns (ditambahkan untuk labeling & forecasting)
-    'SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres',
 ]
 n_features = len(target_columns)
+
+# Fault columns dibaca terpisah — hanya untuk labeling, tidak masuk model
+fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres']
 
 # =============================
 # BACA & PREPROCESSING (HANYA DATA REAL)
@@ -86,29 +88,30 @@ def read_and_crop(filepath):
     # Membersihkan nama kolom dan mengonversi tipe data.
     df.columns = [col.strip() for col in df.columns]
     # Memperbaiki format timestamp (ts_date) dan mengubahnya menjadi tipe datetime.
-    df['ts_date'] = pd.to_datetime(df['ts_date'].astype(str).str.replace(',', '.'), 
+    df['ts_date'] = pd.to_datetime(df['ts_date'].astype(str).str.replace(',', '.'),
                                    format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
     df = df.dropna(subset=['ts_date'])
     # Mengonversi 21 parameter target menjadi numerik (mengganti koma dengan titik sebagai desimal).
-    for col in target_columns:
+    all_cols = target_columns + fault_columns
+    for col in all_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce')
         else:
             df[col] = np.nan
-    # Mengisi nilai hilang (missing values) pada 21 parameter menggunakan metode forward-fill diikuti backward-fill.
-    df[target_columns] = df[target_columns].ffill().bfill()
+    # Mengisi nilai hilang (missing values) menggunakan metode forward-fill diikuti backward-fill.
+    df[all_cols] = df[all_cols].ffill().bfill()
 
     file_date = df['ts_date'].dt.date.iloc[0]
     start_dt = datetime.combine(file_date, START_TIME)
     end_dt = datetime.combine(file_date, END_TIME)
     # Pemotongan waktu operasional: hanya data dari pukul 06:00:00 hingga 18:16:35 yang dipertahankan.
     df = df[(df['ts_date'] >= start_dt) & (df['ts_date'] <= end_dt)]
-    
+
     if len(df) < N_DROP_FIRST + N_TAKE * 0.8:
         return pd.DataFrame()
     # Membuang 3.600 baris awal (fase transien) dan menggunakan 150.000 baris selanjutnya sebagai data harian.
     df = df.iloc[N_DROP_FIRST:N_DROP_FIRST + N_TAKE].reset_index(drop=True)
-    return df[['ts_date'] + target_columns]
+    return df[['ts_date'] + target_columns + fault_columns]
 
 # Proses kompresi data harian
 compressed_dfs = []
@@ -135,20 +138,13 @@ if len(compressed_dfs) < 4:
 # =============================
 # LABELING HEALTH STATUS
 # =============================
-# Fault columns yang kini ada di compressed_dfs (sudah masuk target_columns)
-fault_cols = [
-    'SIV_MajorBCFltPres',
-    'SIV_MajorInputConvFltPres',
-    'SIV_MajorInvFltPres',
-]
-
 def label_health_status(df_day, day_idx, total_days):
     # Aturan 1: hari terakhir (file CSV terakhir) selalu Near-Fail
     if day_idx == total_days - 1:
         return 2, "Near-Fail"
-    # Aturan 2: deteksi fault dari kolom yang kini ada di compressed_dfs
+    # Aturan 2: deteksi fault dari fault_columns (dibaca terpisah, tidak masuk model)
     # (nilai mean > 0 berarti minimal 1 titik dalam hari itu ada fault)
-    for col in fault_cols:
+    for col in fault_columns:
         if col in df_day.columns and (df_day[col] > 0).any():
             return 1, "Pre-Anomali"
     # Aturan 3: tidak ada fault → Sehat
