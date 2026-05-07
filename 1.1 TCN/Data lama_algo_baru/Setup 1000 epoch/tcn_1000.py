@@ -27,8 +27,8 @@ from torch.utils.data import Dataset, DataLoader
 N_EPOCHS = 1000
 BATCH_SIZE = 4
 CHECKPOINT_INTERVAL = 50
-CHECKPOINT_DIR = "checkpoints_24param_TCN"
-LOG_FILE = "training_log_24param_TCN.txt"
+CHECKPOINT_DIR = "checkpoints_21forecast_3classification_TCN"
+LOG_FILE = "training_log_21forecast_3classification_TCN.txt"
 
 COMPRESSION_FACTOR = 1             # SATU-SATUNYA ANGKA YANG PERNAH KAMU UBAH
 # 100 = cepat | 50 = sedang | 25 = detail | 10 = super detail
@@ -408,8 +408,8 @@ pred_signal = scaler.inverse_transform(pred_sig_scaled.reshape(-1, n_features)).
 status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
 log_print(f"PREDIKSI HARI DEPAN: {status_map[pred_status]} ({pred_confidence:.2f}% confidence)")
 
-torch.save(model.state_dict(), "model_24param_TCN_final.pth")
-joblib.dump(scaler, "scaler_24param_TCN.pkl")
+torch.save(model.state_dict(), "model_21forecast_3classification_TCN_final.pth")
+joblib.dump(scaler, "scaler_21forecast_3classification_TCN.pkl")
 log_print("Model & scaler disimpan")
 
 # =============================
@@ -512,17 +512,15 @@ if len(compressed_dfs) >= 4:
 # SIMPAN HASIL PREDIKSI CSV
 # =============================
 result_df = pd.DataFrame(pred_signal, columns=target_columns)
-# Timestamp digeser +1 hari dari hari terakhir data (prediksi = hari depan)
-last_ts = pd.Series(compressed_dfs[-1]['ts_date'].values[-FUTURE:])
-result_df.insert(0, 'ts_date', last_ts + pd.Timedelta(days=1))
+result_df.insert(0, 'ts_date', compressed_dfs[-1]['ts_date'].values[-FUTURE:])
 result_df['health_status_pred'] = status_map[pred_status]
 result_df['confidence_percent'] = pred_confidence
-result_df.to_csv("prediksi_hari_depan_24param_TCN.csv", index=False)
-log_print("prediksi_hari_depan_24param_TCN.csv disimpan")
+result_df.to_csv("prediksi_hari_depan_21forecast_3classification_TCN.csv", index=False)
+log_print("prediksi_hari_depan_21forecast_3classification_TCN.csv disimpan")
 
 log_print("\nSEMUA SELESAI 100% - VERSI DATA REAL TANPA DUPLIKASI APAPUN!")
 print("\n" + "="*90)
 print("SELESAI TOTAL! Hanya pakai data asli, tidak ada duplikasi lagi.")
 print("Ganti COMPRESSION_FACTOR = 10 / 25 / 50 / 100 → tetap akurat otomatis")
-print("MSE + Accuracy tiap epoch sudah tercatat di training_log_24param_TCN.txt")
+print("MSE + Accuracy tiap epoch sudah tercatat di training_log_21forecast_3classification_TCN.txt")
 print("="*90)
