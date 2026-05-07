@@ -57,9 +57,37 @@ print(f"         → {COMPRESSED_POINTS_PER_DAY} titik = 1 hari penuh")
 print(f"         → Input sequence  = {WINDOW} timesteps (3 hari)")
 print(f"         → Prediksi output = {FUTURE} timesteps (1 hari)\n")
 
-# =============================
-# 21 PARAMETER (fault columns HANYA untuk labeling, BUKAN forecasting)
-# =============================
+# ============================================================
+# PARAMETER FORECAST — 21 kolom continuous (masuk model TCN)
+# Model memprediksi nilai ke-21 parameter ini untuk hari depan
+# ============================================================
+# Suhu Heatsink & Container (5 param):
+#   SIV_T_HS_InConv_1, SIV_T_HS_InConv_2  → suhu heatsink input converter
+#   SIV_T_HS_Inv_1, SIV_T_HS_Inv_2        → suhu heatsink inverter
+#   SIV_T_Container                         → suhu dalam container
+#
+# Arus / Current (5 param):
+#   SIV_I_L1, SIV_I_L2, SIV_I_L3          → arus output AC fase L1/L2/L3
+#   SIV_I_Battery                           → arus baterai
+#   SIV_I_DC_In                             → arus input DC
+#
+# Tegangan / Voltage (6 param):
+#   SIV_U_Battery                           → tegangan baterai
+#   SIV_U_DC_In                             → tegangan input DC
+#   SIV_U_DC_Out                            → tegangan output DC
+#   SIV_U_L1, SIV_U_L2, SIV_U_L3          → tegangan output AC fase L1/L2/L3
+#
+# Energi (2 param):
+#   SIV_InConv_InEnergy                     → energi masuk input converter
+#   SIV_Output_Energy                       → energi keluaran total
+#
+# Status Digital (3 param):
+#   PLC_OpenACOutputCont                    → status kontaktor output AC
+#   PLC_OpenInputCont                       → status kontaktor input
+#   SIV_DevIsAlive                          → heartbeat / device hidup
+#
+# TOTAL FORECAST : 5 + 5 + 6 + 2 + 3 = 21 parameter
+# ============================================================
 target_columns = [
     'SIV_T_HS_InConv_1', 'SIV_T_HS_InConv_2', 'SIV_T_HS_Inv_1', 'SIV_T_HS_Inv_2', 'SIV_T_Container',
     'SIV_I_L1', 'SIV_I_L2', 'SIV_I_L3', 'SIV_I_Battery', 'SIV_I_DC_In',
@@ -67,9 +95,24 @@ target_columns = [
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
     'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive',
 ]
-n_features = len(target_columns)
+n_features = len(target_columns)  # = 21
 
-# Fault columns dibaca terpisah — hanya untuk labeling, tidak masuk model
+# ============================================================
+# PARAMETER KLASIFIKASI — 3 kolom binary (TIDAK masuk forecast)
+# Dipakai HANYA sebagai sumber label health status (0/1/2)
+# DILARANG masuk target_columns → menyebabkan NaN loss karena
+# binary (0/1) tidak kompatibel di-scale bersama nilai continuous
+# ============================================================
+# SIV_MajorBCFltPres          → fault major battery converter (binary 0/1)
+# SIV_MajorInputConvFltPres   → fault major input converter   (binary 0/1)
+# SIV_MajorInvFltPres         → fault major inverter          (binary 0/1)
+#
+# TOTAL KLASIFIKASI : 3 parameter binary
+# Output klasifikasi model → 3 kelas:
+#   0 = Sehat       (tidak ada fault sama sekali)
+#   1 = Pre-Anomali (minimal 1 fault terdeteksi dalam hari itu)
+#   2 = Near-Fail   (hari terakhir data, selalu dianggap kritis)
+# ============================================================
 fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres']
 
 # =============================
@@ -79,7 +122,9 @@ def extract_date(f):
     return datetime.strptime(os.path.basename(f)[:8], "%d%m%Y")
 
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
-csv_files = [f for f in csv_files if f.lower().endswith('.csv') and "hasil" not in os.path.basename(f).lower()]
+csv_files = [f for f in csv_files if f.lower().endswith('.csv')
+             and "hasil" not in os.path.basename(f).lower()
+             and "prediksi" not in os.path.basename(f).lower()]
 csv_files_sorted = sorted(csv_files, key=extract_date)
 
 def read_and_crop(filepath):
@@ -121,13 +166,17 @@ for f in csv_files_sorted:
     if df_raw.empty:
         print(f"Skip {os.path.basename(f)} → data kurang")
         continue
-    chunks, ts_mid = [], []
+    chunks, fault_chunks, ts_mid = [], [], []
     for i in range(COMPRESSED_POINTS_PER_DAY):
         s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
-        # Metode kompresi: rata-rata (mean) pada setiap segmen (chunk) sepanjang COMPRESSION_FACTOR titik.
+        # Kompresi forecast (21 param continuous): mean per segmen
         chunks.append(df_raw[target_columns].iloc[s:e].mean())
+        # Kompresi fault (3 param binary): max per segmen
+        # (max=1 jika minimal 1 titik ada fault dalam window itu)
+        fault_chunks.append(df_raw[fault_columns].iloc[s:e].max())
         ts_mid.append(df_raw['ts_date'].iloc[s + COMPRESSION_FACTOR//2])
     df_comp = pd.DataFrame(chunks, columns=target_columns)
+    df_comp[fault_columns] = pd.DataFrame(fault_chunks, columns=fault_columns).values
     df_comp.insert(0, 'ts_date', ts_mid)
     compressed_dfs.append(df_comp)
 
