@@ -159,24 +159,21 @@ def read_and_crop(filepath):
     return df[['ts_date'] + target_columns + fault_columns]
 
 # Proses kompresi data harian
+# Satu column selection per iterasi (target + fault sekaligus) → identik struktur algo lama
+all_data_cols = target_columns + fault_columns
+
 compressed_dfs = []
-# Ambil data harian yang sudah dipotong
 for f in csv_files_sorted:
     df_raw = read_and_crop(f)
     if df_raw.empty:
         print(f"Skip {os.path.basename(f)} → data kurang")
         continue
-    chunks, fault_chunks, ts_mid = [], [], []
+    chunks, ts_mid = [], []
     for i in range(COMPRESSED_POINTS_PER_DAY):
         s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
-        # Kompresi forecast (21 param continuous): mean per segmen
-        chunks.append(df_raw[target_columns].iloc[s:e].mean())
-        # Kompresi fault (3 param binary): max per segmen
-        # (max=1 jika minimal 1 titik ada fault dalam window itu)
-        fault_chunks.append(df_raw[fault_columns].iloc[s:e].max())
+        chunks.append(df_raw[all_data_cols].iloc[s:e].mean())
         ts_mid.append(df_raw['ts_date'].iloc[s + COMPRESSION_FACTOR//2])
-    df_comp = pd.DataFrame(chunks, columns=target_columns)
-    df_comp[fault_columns] = pd.DataFrame(fault_chunks, columns=fault_columns).values
+    df_comp = pd.DataFrame(chunks, columns=all_data_cols)
     df_comp.insert(0, 'ts_date', ts_mid)
     compressed_dfs.append(df_comp)
 
