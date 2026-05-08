@@ -1,0 +1,11 @@
+
+================================================================================
+TCN TRAINING DATA REAL 100% - 2026-05-08 10:38:18
+Total sample: 6 | Epoch: 250 | Batch: 4
+COMPRESSION_FACTOR: 1× → 150000 pts/hari
+================================================================================
+Epoch    1/250 | Loss: 5.464894 | MSE(Forecast): 0.6984309 | Acc(Class):  16.67% | LR: 1.00e-03
+Epoch    2/250 | Loss: 3.495393 | MSE(Forecast): 0.5366271 | Acc(Class):  66.67% | LR: 1.00e-03
+Epoch    3/250 | Loss: 2.912129 | MSE(Forecast): 0.4729552 | Acc(Class):  83.33% | LR: 1.00e-03
+Epoch    4/250 | Loss: 3.041167 | MSE(Forecast): 0.4401686 | Acc(Class):  66.67% | LR: 1.00e-03
+Epoch    5/250 | Loss: 1.651426 | MSE(Forecast): 0.4190608 | Acc(Class): 100.00% | LR: 1.00e-03
