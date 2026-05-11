@@ -168,7 +168,7 @@ class ClassDataset(Dataset):
     def __getitem__(self, i): return self.X[i], self.y[i]
 
 dataloader = DataLoader(ClassDataset(X_tensor, y_tensor),
-                        batch_size=BATCH_SIZE, shuffle=True, drop_last=False)
+                        batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 
 # =============================
 # MODEL MLP CLASSIFIER
@@ -181,9 +181,9 @@ class MLPClassifier(nn.Module):
     def __init__(self, input_dim=84, dropout=0.3):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(256, 128),       nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(128, 64),        nn.BatchNorm1d(64),  nn.ReLU(), nn.Dropout(dropout),
+            nn.Linear(input_dim, 256), nn.LayerNorm(256), nn.ReLU(), nn.Dropout(dropout),
+            nn.Linear(256, 128),       nn.LayerNorm(128), nn.ReLU(), nn.Dropout(dropout),
+            nn.Linear(128, 64),        nn.LayerNorm(64),  nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(64, 3)
         )
     def forward(self, x):
