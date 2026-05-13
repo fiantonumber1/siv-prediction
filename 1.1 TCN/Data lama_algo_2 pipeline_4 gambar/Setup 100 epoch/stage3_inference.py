@@ -153,6 +153,7 @@ class TCNForecaster(nn.Module):
         )
     def forward(self, x):
         ctx  = self.pool(self.tcn(x.transpose(1, 2))).squeeze(-1)
+        n_features = x.shape[-1]
         pred = self.dec(ctx).view(-1, FUTURE, n_features)
         return pred, ctx
 
