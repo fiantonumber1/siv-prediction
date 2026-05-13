@@ -1,0 +1,31 @@
+
+============================================================
+STAGE 2 AUTO CLUSTERING | 2026-05-12 15:20:01
+Total hari: 9 | Optimal k: 2 | Best silhouette: 0.3333
+============================================================
+
+Ringkasan tiap cluster:
+  Cluster 0 | 2 hari | 20062024.csv, 06072024.csv
+    SIV_T_HS_InConv_1: mean=35.2240  std=1.9446
+    SIV_I_L1: mean=21.9928  std=21.9213
+    SIV_U_Battery: mean=113.3168  std=0.7424
+    SIV_Output_Energy: mean=458.4342  std=43.9068
+  Cluster 1 | 7 hari | 12062024.csv, 24062024.csv, 22072024.csv, 29072024.csv, 26082024.csv, 31082024.csv, 03092024.csv
+    SIV_T_HS_InConv_1: mean=43.3647  std=3.5375
+    SIV_I_L1: mean=62.2572  std=25.6796
+    SIV_U_Battery: mean=113.1591  std=0.2232
+    SIV_Output_Energy: mean=214.3723  std=114.7165
+
+Label tiap hari:
+  Day  1 (12062024.csv) → Cluster 1
+  Day  2 (20062024.csv) → Cluster 0
+  Day  3 (24062024.csv) → Cluster 1
+  Day  4 (06072024.csv) → Cluster 0
+  Day  5 (22072024.csv) → Cluster 1
+  Day  6 (29072024.csv) → Cluster 1
+  Day  7 (26082024.csv) → Cluster 1
+  Day  8 (31082024.csv) → Cluster 1
+  Day  9 (03092024.csv) → Cluster 1
+
+=== STAGE 2 SELESAI ===
+
