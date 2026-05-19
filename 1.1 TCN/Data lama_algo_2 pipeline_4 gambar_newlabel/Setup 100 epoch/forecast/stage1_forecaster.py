@@ -47,7 +47,7 @@ target_columns = [
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
     'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive',
 ]
-fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres']
+fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres']
 n_features    = len(target_columns)  # 21
 
 # =============================

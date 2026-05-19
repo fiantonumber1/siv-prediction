@@ -53,9 +53,9 @@ target_columns = [
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
     'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive',
 ]
-fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres']
+fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres']
 
-status_map   = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
+status_map   = {0: "Sehat", 1: "Pre-Anomali", 2: "Warning"}
 status_color = {0: "green", 1: "orange", 2: "red"}
 
 # =========================================================
@@ -346,7 +346,7 @@ print(f"Input  : {CSV_DAY_A} + {CSV_DAY_B} + {CSV_DAY_C}")
 print(f"Status : {status_map[pred_status]}  ({pred_confidence:.2f}% confidence)")
 print(f"Prob Sehat       : {prob[0]*100:.2f}%")
 print(f"Prob Pre-Anomali : {prob[1]*100:.2f}%")
-print(f"Prob Near-Fail   : {prob[2]*100:.2f}%")
+print(f"Prob Warning     : {prob[2]*100:.2f}%")
 print("="*60)
 
 # =========================================================
@@ -524,7 +524,7 @@ result_status = pd.DataFrame([{
     'confidence_pct'      : round(pred_confidence, 2),
     'prob_sehat_pct'      : round(float(prob[0]*100), 2),
     'prob_pre_anomali_pct': round(float(prob[1]*100), 2),
-    'prob_near_fail_pct'  : round(float(prob[2]*100), 2),
+    'prob_warning_pct'    : round(float(prob[2]*100), 2),
     'generated_at'        : datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
 }])
 result_status.to_csv(os.path.join(BASE_DIR, "inference_health_status.csv"), index=False)

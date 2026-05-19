@@ -120,7 +120,7 @@ def day_to_feature_vector(df_day):
 # =============================
 def label_day(df_day, day_idx, total_days):
     if day_idx == total_days - 1:
-        return 2  # Near-Fail
+        return 2  # Warning
     for col in fault_columns:
         if col in df_day.columns and (df_day[col] > 0).any():
             return 1  # Pre-Anomali
@@ -141,7 +141,7 @@ if total_days < 2:
 
 # Setiap hari → 1 sampel fitur + 1 label
 X_cls, y_cls = [], []
-status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
+status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Warning"}
 for i, df_day in enumerate(compressed_dfs):
     feat  = day_to_feature_vector(df_day)
     label = label_day(df_day, i, total_days)
@@ -217,7 +217,7 @@ def log(t):
 
 log(f"\n{'='*60}\nSTAGE 2 MLP CLASSIFIER | {datetime.now():%Y-%m-%d %H:%M:%S}")
 log(f"Sampel: {len(X_tensor)} hari | Epoch: {N_EPOCHS} | Batch: {BATCH_SIZE}")
-log(f"Distribusi: Sehat={sum(y_cls==0)} Pre-Anomali={sum(y_cls==1)} Near-Fail={sum(y_cls==2)}")
+log(f"Distribusi: Sehat={sum(y_cls==0)} Pre-Anomali={sum(y_cls==1)} Warning={sum(y_cls==2)}")
 log(f"{'='*60}")
 
 # =============================
