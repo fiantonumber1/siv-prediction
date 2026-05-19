@@ -4,7 +4,6 @@ STAGE 2 MLP CLASSIFIER | 2026-05-11 17:22:20
 Sampel: 9 hari | Epoch: 100 | Batch: 4
 Distribusi: Sehat=8 Pre-Anomali=0 Near-Fail=1
 ============================================================
-Epoch    1/100 | CE: 1.004605 | Acc:  12.50% | LR: 1.00e-03
 Epoch    2/100 | CE: 0.899444 | Acc:  62.50% | LR: 1.00e-03
 Epoch    3/100 | CE: 0.777816 | Acc:  75.00% | LR: 1.00e-03
 Epoch    4/100 | CE: 0.525874 | Acc:  87.50% | LR: 1.00e-03
