@@ -1,8 +1,7 @@
 # =============================
-# STAGE 2 — MLP CLASSIFIER
-# Per hari: Day1→Status1, Day2→Status2, dst (independen dari Stage 1)
-# Input   : ringkasan 21 param sensor 1 hari (mean + std + max + min)
-# Output  : model_stage2_classifier.pth
+# STAGE 1 — TCN FORECASTER
+# Sliding window: Day1+2+3→Day4, Day2+3+4→Day5, dst
+# Output: model_stage1_forecaster.pth + scaler_stage1.pkl
 # =============================
 
 import pandas as pd
@@ -24,19 +23,20 @@ from torch.utils.data import Dataset, DataLoader
 N_EPOCHS            = 100
 BATCH_SIZE          = 4
 CHECKPOINT_INTERVAL = 50
-CHECKPOINT_DIR      = "checkpoints_stage2"
-LOG_FILE            = "log_stage2.txt"
+CHECKPOINT_DIR      = "checkpoints_stage1"
+LOG_FILE            = "log_stage1.txt"
 COMPRESSION_FACTOR  = 1
 # ==================================================================
 
 N_TAKE                     = 150_000
 COMPRESSED_POINTS_PER_DAY = N_TAKE // COMPRESSION_FACTOR
+FUTURE                     = COMPRESSED_POINTS_PER_DAY
 START_TIME                 = time(6, 0, 0)
 END_TIME                   = time(18, 16, 35)
 N_DROP_FIRST               = 3600
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"[Stage 2] Device: {device}")
+print(f"[Stage 1] Device: {device}")
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 folder_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else "."
 
@@ -47,12 +47,8 @@ target_columns = [
     'SIV_InConv_InEnergy', 'SIV_Output_Energy',
     'PLC_OpenACOutputCont', 'PLC_OpenInputCont', 'SIV_DevIsAlive',
 ]
-fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInverterFltPres']
+fault_columns = ['SIV_MajorBCFltPres', 'SIV_MajorInputConvFltPres', 'SIV_MajorInvFltPres']
 n_features    = len(target_columns)  # 21
-
-# Fitur per hari = mean + std + max + min untuk setiap parameter → 21×4 = 84 dim
-N_STATS   = 4
-INPUT_DIM = n_features * N_STATS  # 84
 
 # =============================
 # BACA & PREPROCESSING
@@ -89,8 +85,12 @@ def read_and_crop(filepath):
         ['ts_date'] + target_columns + fault_columns
     ]
 
-def compress_day(df_raw):
-    """Kompres 1 hari CSV menjadi COMPRESSED_POINTS_PER_DAY titik."""
+compressed_dfs = []
+for f in csv_files:
+    df_raw = read_and_crop(f)
+    if df_raw.empty:
+        print(f"  Skip {os.path.basename(f)}")
+        continue
     chunks, ts_mid = [], []
     for i in range(COMPRESSED_POINTS_PER_DAY):
         s, e = i * COMPRESSION_FACTOR, (i + 1) * COMPRESSION_FACTOR
@@ -98,101 +98,96 @@ def compress_day(df_raw):
         ts_mid.append(df_raw['ts_date'].iloc[s + COMPRESSION_FACTOR // 2])
     df_c = pd.DataFrame(chunks, columns=target_columns + fault_columns)
     df_c.insert(0, 'ts_date', ts_mid)
-    return df_c
+    compressed_dfs.append(df_c)
 
-def day_to_feature_vector(df_day):
-    """
-    Dari 1 hari data terkompresi → vektor fitur statistik per parameter.
-    Shape: (21*4,) = mean, std, max, min untuk tiap parameter
-    """
-    vals = df_day[target_columns].values   # (COMPRESSED_POINTS_PER_DAY, 21)
-    feat = np.concatenate([
-        vals.mean(axis=0),
-        vals.std(axis=0),
-        vals.max(axis=0),
-        vals.min(axis=0),
-    ])
-    return feat.astype(np.float32)
+print(f"[Stage 1] Total hari: {len(compressed_dfs)}")
+if len(compressed_dfs) < 4:
+    raise ValueError("Minimal 4 hari CSV!")
 
 # =============================
-# LABELING: per hari
-# Day terakhir = Near-Fail, ada fault = Pre-Anomali, lainnya = Sehat
+# SLIDING WINDOW: 3 hari → 1 hari
 # =============================
-def label_day(df_day, day_idx, total_days):
-    if day_idx == total_days - 1:
-        return 2  # Near-Fail
-    for col in fault_columns:
-        if col in df_day.columns and (df_day[col] > 0).any():
-            return 1  # Pre-Anomali
-    return 0  # Sehat
+X_seq, y_signal = [], []
+for i in range(len(compressed_dfs) - 3):
+    seq = np.concatenate([df[target_columns].values for df in compressed_dfs[i:i+3]], axis=0)
+    X_seq.append(seq)
+    y_signal.append(compressed_dfs[i+3][target_columns].values)
 
-compressed_dfs = []
-for f in csv_files:
-    df_raw = read_and_crop(f)
-    if df_raw.empty:
-        print(f"  Skip {os.path.basename(f)}")
-        continue
-    compressed_dfs.append(compress_day(df_raw))
+X_seq    = np.array(X_seq,    dtype=np.float32)
+y_signal = np.array(y_signal, dtype=np.float32)
+print(f"[Stage 1] Window training: {len(X_seq)}")
 
-total_days = len(compressed_dfs)
-print(f"[Stage 2] Total hari: {total_days}")
-if total_days < 2:
-    raise ValueError("Minimal 2 hari CSV!")
+scaler   = MinMaxScaler(feature_range=(-0.1, 1.1))
+X_scaled = scaler.fit_transform(X_seq.reshape(-1, n_features)).reshape(X_seq.shape)
+y_scaled = scaler.transform(y_signal.reshape(-1, n_features)).reshape(y_signal.shape)
+joblib.dump(scaler, "scaler_stage1.pkl")
+print("[Stage 1] scaler_stage1.pkl disimpan")
 
-# Setiap hari → 1 sampel fitur + 1 label
-X_cls, y_cls = [], []
-status_map = {0: "Sehat", 1: "Pre-Anomali", 2: "Near-Fail"}
-for i, df_day in enumerate(compressed_dfs):
-    feat  = day_to_feature_vector(df_day)
-    label = label_day(df_day, i, total_days)
-    X_cls.append(feat)
-    y_cls.append(label)
-    print(f"  Day {i+1:2d} → {status_map[label]}")
+X_tensor     = torch.FloatTensor(X_scaled).to(device)
+y_sig_tensor = torch.FloatTensor(y_scaled).to(device)
 
-X_cls = np.array(X_cls, dtype=np.float32)   # (N_days, 84)
-y_cls = np.array(y_cls, dtype=np.int64)     # (N_days,)
-print(f"[Stage 2] Sampel training: {len(X_cls)} hari")
-
-# Normalisasi fitur statistik
-scaler_cls = MinMaxScaler(feature_range=(-0.1, 1.1))
-X_scaled   = scaler_cls.fit_transform(X_cls)
-joblib.dump(scaler_cls, "scaler_stage2.pkl")
-print("[Stage 2] scaler_stage2.pkl disimpan")
-
-X_tensor = torch.FloatTensor(X_scaled).to(device)
-y_tensor = torch.LongTensor(y_cls).to(device)
-
-class ClassDataset(Dataset):
+class ForecastDataset(Dataset):
     def __init__(self, X, y): self.X, self.y = X, y
     def __len__(self): return len(self.X)
     def __getitem__(self, i): return self.X[i], self.y[i]
 
-dataloader = DataLoader(ClassDataset(X_tensor, y_tensor),
-                        batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+dataloader = DataLoader(ForecastDataset(X_tensor, y_sig_tensor),
+                        batch_size=BATCH_SIZE, shuffle=True, drop_last=False)
 
 # =============================
-# MODEL MLP CLASSIFIER
+# MODEL TCN
 # =============================
-class MLPClassifier(nn.Module):
-    """
-    Input : (batch, 84)  ← mean+std+max+min per 21 parameter
-    Output: (batch, 3)   ← logit 3 kelas: Sehat / Pre-Anomali / Near-Fail
-    """
-    def __init__(self, input_dim=84, dropout=0.3):
+class CausalConv1d(nn.Module):
+    def __init__(self, in_ch, out_ch, ks, dilation=1):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, 256), nn.LayerNorm(256), nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(256, 128),       nn.LayerNorm(128), nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(128, 64),        nn.LayerNorm(64),  nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(64, 3)
+        self.pad  = (ks - 1) * dilation
+        self.conv = nn.Conv1d(in_ch, out_ch, ks, padding=self.pad, dilation=dilation)
+    def forward(self, x):
+        o = self.conv(x)
+        return o[:, :, :-self.pad] if self.pad > 0 else o
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_ch, out_ch, ks=3, dilation=1, dropout=0.3):
+        super().__init__()
+        self.c1   = CausalConv1d(in_ch,  out_ch, ks, dilation)
+        self.n1   = nn.BatchNorm1d(out_ch); self.r1 = nn.ReLU(); self.d1 = nn.Dropout(dropout)
+        self.c2   = CausalConv1d(out_ch, out_ch, ks, dilation)
+        self.n2   = nn.BatchNorm1d(out_ch); self.r2 = nn.ReLU(); self.d2 = nn.Dropout(dropout)
+        self.skip = nn.Conv1d(in_ch, out_ch, 1) if in_ch != out_ch else nn.Identity()
+    def forward(self, x):
+        r = self.skip(x)
+        o = self.d1(self.r1(self.n1(self.c1(x))))
+        o = self.d2(self.r2(self.n2(self.c2(o))))
+        return o + r
+
+class TCNForecaster(nn.Module):
+    """
+    Input : (batch, 3*COMPRESSED_POINTS_PER_DAY, 21)
+    Output: pred_signal (batch, FUTURE, 21)
+            context     (batch, 96)
+    """
+    def __init__(self, n_features, n_ch=96, ks=3, n_blocks=7, dropout=0.3):
+        super().__init__()
+        dilations = [1, 2, 4, 8, 16, 32, 64]
+        layers, in_ch = [], n_features
+        for i in range(n_blocks):
+            layers.append(ResidualBlock(in_ch, n_ch, ks, dilations[i], dropout))
+            in_ch = n_ch
+        self.tcn  = nn.Sequential(*layers)
+        self.pool = nn.AdaptiveAvgPool1d(1)
+        self.dec  = nn.Sequential(
+            nn.Linear(n_ch, n_ch), nn.ReLU(), nn.Dropout(dropout),
+            nn.Linear(n_ch, n_features * FUTURE)
         )
     def forward(self, x):
-        return self.net(x)
+        ctx  = self.pool(self.tcn(x.transpose(1, 2))).squeeze(-1)   # (B, 96)
+        pred = self.dec(ctx).view(-1, FUTURE, n_features)            # (B, FUTURE, 21)
+        return pred, ctx
 
-model     = MLPClassifier(INPUT_DIM).to(device)
+model     = TCNForecaster(n_features).to(device)
 optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-5)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=30, verbose=True)
-criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.5, 2.5, 4.0]).to(device))
+criterion = nn.MSELoss()
 
 # =============================
 # CHECKPOINT & RESUME
@@ -206,19 +201,17 @@ if cp_files:
         cp = torch.load(cp_path, map_location=device)
         model.load_state_dict(cp['model']); optimizer.load_state_dict(cp['optimizer'])
         scheduler.load_state_dict(cp['scheduler']); start_epoch = latest + 1
-        print(f"[Stage 2] Resume epoch {start_epoch}")
+        print(f"[Stage 1] Resume epoch {start_epoch}")
     else:
         model.load_state_dict(torch.load(cp_path, map_location=device)['model'])
-        print(f"[Stage 2] Sudah selesai epoch {latest}")
+        print(f"[Stage 1] Sudah selesai epoch {latest}")
 
 def log(t):
     print(t)
     with open(LOG_FILE, 'a', encoding='utf-8') as f: f.write(t + '\n')
 
-log(f"\n{'='*60}\nSTAGE 2 MLP CLASSIFIER | {datetime.now():%Y-%m-%d %H:%M:%S}")
-log(f"Sampel: {len(X_tensor)} hari | Epoch: {N_EPOCHS} | Batch: {BATCH_SIZE}")
-log(f"Distribusi: Sehat={sum(y_cls==0)} Pre-Anomali={sum(y_cls==1)} Near-Fail={sum(y_cls==2)}")
-log(f"{'='*60}")
+log(f"\n{'='*60}\nSTAGE 1 TCN FORECASTER | {datetime.now():%Y-%m-%d %H:%M:%S}")
+log(f"Window: {len(X_tensor)} | Epoch: {N_EPOCHS} | Batch: {BATCH_SIZE}\n{'='*60}")
 
 # =============================
 # TRAINING
@@ -226,28 +219,25 @@ log(f"{'='*60}")
 if start_epoch <= N_EPOCHS:
     model.train()
     for epoch in range(start_epoch, N_EPOCHS + 1):
-        total, correct, samples = 0.0, 0, 0
+        total = 0.0
         for x, y in dataloader:
             optimizer.zero_grad()
-            logits = model(x)
-            loss   = criterion(logits, y)
+            pred, _ = model(x)
+            loss = criterion(pred, y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-            total   += loss.item()
-            correct += (logits.argmax(1) == y).sum().item()
-            samples += y.size(0)
+            total += loss.item()
         avg = total / len(dataloader)
-        acc = 100.0 * correct / samples
         scheduler.step(avg)
-        log(f"Epoch {epoch:4d}/{N_EPOCHS} | CE: {avg:.6f} | Acc: {acc:6.2f}% | LR: {optimizer.param_groups[0]['lr']:.2e}")
+        log(f"Epoch {epoch:4d}/{N_EPOCHS} | MSE: {avg:.7f} | LR: {optimizer.param_groups[0]['lr']:.2e}")
         if epoch % CHECKPOINT_INTERVAL == 0 or epoch == N_EPOCHS:
             p = os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch_{epoch}.pth")
             torch.save({'epoch': epoch, 'model': model.state_dict(),
                         'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict()}, p)
             log(f"   → Checkpoint: {p}")
-    log("=== STAGE 2 SELESAI ===\n")
+    log("=== STAGE 1 SELESAI ===\n")
 
-torch.save(model.state_dict(), "model_stage2_classifier.pth")
-log("model_stage2_classifier.pth disimpan")
-print("\nSTAGE 2 SELESAI! Jalankan stage3_inference.py untuk prediksi.")
+torch.save(model.state_dict(), "model_stage1_forecaster.pth")
+log("model_stage1_forecaster.pth disimpan")
+print("\nSTAGE 1 SELESAI! Jalankan stage2_classifier.py berikutnya.")
