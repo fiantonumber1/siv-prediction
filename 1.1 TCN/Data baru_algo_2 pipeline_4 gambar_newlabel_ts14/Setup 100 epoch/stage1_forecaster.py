@@ -26,7 +26,7 @@ CHECKPOINT_DIR      = os.path.join(SCRIPT_DIR, "checkpoints_stage1")
 LOG_FILE            = os.path.join(SCRIPT_DIR, "log_stage1.txt")
 
 N_EPOCHS            = 100
-BATCH_SIZE          = 4
+BATCH_SIZE          = 3
 CHECKPOINT_INTERVAL = 50
 COMPRESSION_FACTOR  = 1
 # ==================================================================
